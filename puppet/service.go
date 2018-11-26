@@ -29,7 +29,7 @@ func CreateService(c eval.Context, serviceName, fileName string) serviceapi.Serv
 		}
 	}
 	c.Set(ServerBuilderKey, sb)
-	_, e := c.Evaluator().Evaluate(c, ast)
+	_, e := eval.TopEvaluate(c, ast)
 	if e != nil {
 		panic(e)
 	}

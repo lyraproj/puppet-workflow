@@ -58,7 +58,7 @@ func withSampleLocalService(sf func(eval.Context, serviceapi.Service)) {
 
 func ExampleActivity() {
 	withSampleLocalService(func(ctx eval.Context, s serviceapi.Service) {
-		_, defs := s.Metadata()
+		_, defs := s.Metadata(ctx)
 		for _, def := range defs {
 			fmt.Println(eval.ToPrettyString(def))
 		}

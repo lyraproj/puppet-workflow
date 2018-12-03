@@ -19,11 +19,9 @@ import (
 )
 
 func withSampleService(sf func(eval.Context, serviceapi.Service)) {
-	eval.Puppet.Set(`tasks`, types.Boolean_TRUE)
-	eval.Puppet.Set(`workflow`, types.Boolean_TRUE)
 	eval.Puppet.Do(func(ctx eval.Context) {
 		// Command to start plug-in and read a given manifest
-		cmd := exec.Command("go", "run", "../main/main.go", `testdata/attach.pp`)
+		cmd := exec.Command("go", "run", "../main.go")
 
 		// Logger that prints JSON on Stderr
 		logger := hclog.New(&hclog.LoggerOptions{
@@ -33,10 +31,9 @@ func withSampleService(sf func(eval.Context, serviceapi.Service)) {
 		})
 
 		server, err := grpc.Load(cmd, logger)
-		defer func() {
-			// Ensure that plug-ins die when we're done.
-			plugin.CleanupClients()
-		}()
+
+		// Ensure that plug-ins die when we're done.
+		defer	plugin.CleanupClients()
 
 		if err == nil {
 			sf(ctx, server)
@@ -47,21 +44,18 @@ func withSampleService(sf func(eval.Context, serviceapi.Service)) {
 }
 
 func withSampleLocalService(sf func(eval.Context, serviceapi.Service)) {
-	eval.Puppet.Set(`tasks`, types.Boolean_TRUE)
-	eval.Puppet.Set(`workflow`, types.Boolean_TRUE)
-	eval.Puppet.Do(func(ctx eval.Context) {
-		workflowName := `attach`
-		path := `testdata/` + workflowName + `.pp`
-		sf(ctx, puppet.CreateService(ctx, `Puppet`, path))
-	})
+	puppet.WithService(`Puppet`, sf)
 }
 
 func ExampleActivity() {
-	withSampleLocalService(func(ctx eval.Context, s serviceapi.Service) {
-		_, defs := s.Metadata(ctx)
-		for _, def := range defs {
+	withSampleService(func(ctx eval.Context, s serviceapi.Service) {
+		s.Metadata(ctx)
+		rs := s.Invoke(ctx, puppet.ManifestLoaderID, "load_manifest", types.WrapString("testdata/attach.pp")).(serviceapi.Definition)
+		v := s.Invoke(ctx, rs.Identifier().Name(), "metadata").(eval.List)
+		dl := v.At(1).(eval.List)
+		dl.Each(func(def eval.Value) {
 			fmt.Println(eval.ToPrettyString(def))
-		}
+		})
 	})
 
 	// Output:
@@ -72,7 +66,7 @@ func ExampleActivity() {
 	//   ),
 	//   'serviceId' => TypedName(
 	//     'namespace' => 'service',
-	//     'name' => 'Puppet'
+	//     'name' => 'Testdata::AttachPp'
 	//   ),
 	//   'properties' => {
 	//     'interface' => Genesis::Aws::InstanceHandler,
@@ -87,7 +81,7 @@ func ExampleActivity() {
 	//   ),
 	//   'serviceId' => TypedName(
 	//     'namespace' => 'service',
-	//     'name' => 'Puppet'
+	//     'name' => 'Testdata::AttachPp'
 	//   ),
 	//   'properties' => {
 	//     'interface' => Genesis::Aws::InternetGatewayHandler,
@@ -102,7 +96,7 @@ func ExampleActivity() {
 	//   ),
 	//   'serviceId' => TypedName(
 	//     'namespace' => 'service',
-	//     'name' => 'Puppet'
+	//     'name' => 'Testdata::AttachPp'
 	//   ),
 	//   'properties' => {
 	//     'interface' => Genesis::Aws::SubnetHandler,
@@ -117,7 +111,7 @@ func ExampleActivity() {
 	//   ),
 	//   'serviceId' => TypedName(
 	//     'namespace' => 'service',
-	//     'name' => 'Puppet'
+	//     'name' => 'Testdata::AttachPp'
 	//   ),
 	//   'properties' => {
 	//     'interface' => Genesis::Aws::VpcHandler,
@@ -132,7 +126,7 @@ func ExampleActivity() {
 	//   ),
 	//   'serviceId' => TypedName(
 	//     'namespace' => 'service',
-	//     'name' => 'Puppet'
+	//     'name' => 'Testdata::AttachPp'
 	//   ),
 	//   'properties' => {
 	//     'input' => [
@@ -194,7 +188,7 @@ func ExampleActivity() {
 	//         ),
 	//         'serviceId' => TypedName(
 	//           'namespace' => 'service',
-	//           'name' => 'Puppet'
+	//           'name' => 'Testdata::AttachPp'
 	//         ),
 	//         'properties' => {
 	//           'input' => [
@@ -222,7 +216,7 @@ func ExampleActivity() {
 	//         ),
 	//         'serviceId' => TypedName(
 	//           'namespace' => 'service',
-	//           'name' => 'Puppet'
+	//           'name' => 'Testdata::AttachPp'
 	//         ),
 	//         'properties' => {
 	//           'input' => [
@@ -254,7 +248,7 @@ func ExampleActivity() {
 	//         ),
 	//         'serviceId' => TypedName(
 	//           'namespace' => 'service',
-	//           'name' => 'Puppet'
+	//           'name' => 'Testdata::AttachPp'
 	//         ),
 	//         'properties' => {
 	//           'iteration_style' => 'times',
@@ -275,7 +269,7 @@ func ExampleActivity() {
 	//             ),
 	//             'serviceId' => TypedName(
 	//               'namespace' => 'service',
-	//               'name' => 'Puppet'
+	//               'name' => 'Testdata::AttachPp'
 	//             ),
 	//             'properties' => {
 	//               'input' => [
@@ -320,7 +314,7 @@ func ExampleActivity() {
 	//         ),
 	//         'serviceId' => TypedName(
 	//           'namespace' => 'service',
-	//           'name' => 'Puppet'
+	//           'name' => 'Testdata::AttachPp'
 	//         ),
 	//         'properties' => {
 	//           'input' => [

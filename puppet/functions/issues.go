@@ -1,6 +1,6 @@
 package functions
 
-import "github.com/puppetlabs/go-issues/issue"
+import "github.com/lyraproj/issue/issue"
 
 const (
 	WF_NO_SERVER_BUILDER_IN_CONTEXT = `WF_NO_SERVER_BUILDER_IN_CONTEXT`

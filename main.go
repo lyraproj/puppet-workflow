@@ -2,13 +2,13 @@ package main
 
 import (
 	"github.com/hashicorp/go-hclog"
-	"github.com/puppetlabs/go-puppet-dsl-workflow/puppet"
+	"github.com/lyraproj/puppet-workflow/puppet"
 	"os"
 
 	// Ensure that Pcore is initialized
-	_ "github.com/puppetlabs/go-evaluator/pcore"
-	_ "github.com/puppetlabs/go-puppet-dsl-workflow/puppet/functions"
-	_ "github.com/puppetlabs/go-servicesdk/wf"
+	_ "github.com/lyraproj/puppet-evaluator/pcore"
+	_ "github.com/lyraproj/puppet-workflow/puppet/functions"
+	_ "github.com/lyraproj/servicesdk/wf"
 )
 
 func main() {

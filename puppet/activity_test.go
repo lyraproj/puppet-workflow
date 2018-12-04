@@ -4,19 +4,19 @@ import (
 	"fmt"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-plugin"
-	"github.com/puppetlabs/go-evaluator/eval"
-	"github.com/puppetlabs/go-evaluator/types"
-	"github.com/puppetlabs/go-puppet-dsl-workflow/puppet"
-	"github.com/puppetlabs/go-servicesdk/grpc"
-	"github.com/puppetlabs/go-servicesdk/serviceapi"
+	"github.com/lyraproj/puppet-evaluator/eval"
+	"github.com/lyraproj/puppet-evaluator/types"
+	"github.com/lyraproj/puppet-workflow/puppet"
+	"github.com/lyraproj/servicesdk/grpc"
+	"github.com/lyraproj/servicesdk/serviceapi"
 	"os"
 	"os/exec"
 	"time"
 
 	//   Ensure Pcore and lookup are initialized
-	_ "github.com/puppetlabs/go-evaluator/pcore"
-	_ "github.com/puppetlabs/go-puppet-dsl-workflow/puppet/functions"
-	_ "github.com/puppetlabs/go-servicesdk/wf"
+	_ "github.com/lyraproj/puppet-evaluator/pcore"
+	_ "github.com/lyraproj/puppet-workflow/puppet/functions"
+	_ "github.com/lyraproj/servicesdk/wf"
 )
 
 func withSampleService(sf func(eval.Context, serviceapi.Service)) {
@@ -75,61 +75,61 @@ func ExampleActivity() {
 	// Service::Definition(
 	//   'identifier' => TypedName(
 	//     'namespace' => 'definition',
-	//     'name' => 'Genesis::Aws::InstanceHandler'
+	//     'name' => 'Lyra::Aws::InstanceHandler'
 	//   ),
 	//   'serviceId' => TypedName(
 	//     'namespace' => 'service',
 	//     'name' => 'Testdata::AttachPp'
 	//   ),
 	//   'properties' => {
-	//     'interface' => Genesis::Aws::InstanceHandler,
+	//     'interface' => Lyra::Aws::InstanceHandler,
 	//     'style' => 'callable',
-	//     'handler_for' => Genesis::Aws::Instance
+	//     'handler_for' => Lyra::Aws::Instance
 	//   }
 	// )
 	// Service::Definition(
 	//   'identifier' => TypedName(
 	//     'namespace' => 'definition',
-	//     'name' => 'Genesis::Aws::InternetGatewayHandler'
+	//     'name' => 'Lyra::Aws::InternetGatewayHandler'
 	//   ),
 	//   'serviceId' => TypedName(
 	//     'namespace' => 'service',
 	//     'name' => 'Testdata::AttachPp'
 	//   ),
 	//   'properties' => {
-	//     'interface' => Genesis::Aws::InternetGatewayHandler,
+	//     'interface' => Lyra::Aws::InternetGatewayHandler,
 	//     'style' => 'callable',
-	//     'handler_for' => Genesis::Aws::InternetGateway
+	//     'handler_for' => Lyra::Aws::InternetGateway
 	//   }
 	// )
 	// Service::Definition(
 	//   'identifier' => TypedName(
 	//     'namespace' => 'definition',
-	//     'name' => 'Genesis::Aws::SubnetHandler'
+	//     'name' => 'Lyra::Aws::SubnetHandler'
 	//   ),
 	//   'serviceId' => TypedName(
 	//     'namespace' => 'service',
 	//     'name' => 'Testdata::AttachPp'
 	//   ),
 	//   'properties' => {
-	//     'interface' => Genesis::Aws::SubnetHandler,
+	//     'interface' => Lyra::Aws::SubnetHandler,
 	//     'style' => 'callable',
-	//     'handler_for' => Genesis::Aws::Subnet
+	//     'handler_for' => Lyra::Aws::Subnet
 	//   }
 	// )
 	// Service::Definition(
 	//   'identifier' => TypedName(
 	//     'namespace' => 'definition',
-	//     'name' => 'Genesis::Aws::VpcHandler'
+	//     'name' => 'Lyra::Aws::VpcHandler'
 	//   ),
 	//   'serviceId' => TypedName(
 	//     'namespace' => 'service',
 	//     'name' => 'Testdata::AttachPp'
 	//   ),
 	//   'properties' => {
-	//     'interface' => Genesis::Aws::VpcHandler,
+	//     'interface' => Lyra::Aws::VpcHandler,
 	//     'style' => 'callable',
-	//     'handler_for' => Genesis::Aws::Vpc
+	//     'handler_for' => Lyra::Aws::Vpc
 	//   }
 	// )
 	// Service::Definition(
@@ -218,7 +218,7 @@ func ExampleActivity() {
 	//               'name' => 'vpc_id',
 	//               'type' => Any
 	//             )],
-	//           'resource_type' => Genesis::Aws::Vpc,
+	//           'resource_type' => Lyra::Aws::Vpc,
 	//           'style' => 'resource'
 	//         }
 	//       ),
@@ -250,7 +250,7 @@ func ExampleActivity() {
 	//               'name' => 'subnet_id',
 	//               'type' => Any
 	//             )],
-	//           'resource_type' => Genesis::Aws::Subnet,
+	//           'resource_type' => Lyra::Aws::Subnet,
 	//           'style' => 'resource'
 	//         }
 	//       ),
@@ -313,7 +313,7 @@ func ExampleActivity() {
 	//                   'type' => Any,
 	//                   'value' => ['public_ip', 'private_ip']
 	//                 )],
-	//               'resource_type' => Genesis::Aws::Instance,
+	//               'resource_type' => Lyra::Aws::Instance,
 	//               'style' => 'resource'
 	//             }
 	//           ),
@@ -344,7 +344,7 @@ func ExampleActivity() {
 	//               'name' => 'internet_gateway_id',
 	//               'type' => Any
 	//             )],
-	//           'resource_type' => Genesis::Aws::InternetGateway,
+	//           'resource_type' => Lyra::Aws::InternetGateway,
 	//           'style' => 'resource'
 	//         }
 	//       )],

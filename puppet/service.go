@@ -2,18 +2,18 @@ package puppet
 
 import (
 	"bytes"
-	"github.com/puppetlabs/go-evaluator/eval"
-	"github.com/puppetlabs/go-puppet-dsl-workflow/puppet/functions"
-	"github.com/puppetlabs/go-evaluator/types"
-	"github.com/puppetlabs/go-issues/issue"
-	"github.com/puppetlabs/go-servicesdk/grpc"
-	"github.com/puppetlabs/go-servicesdk/service"
-	"github.com/puppetlabs/go-servicesdk/serviceapi"
+	"github.com/lyraproj/puppet-evaluator/eval"
+	"github.com/lyraproj/puppet-workflow/puppet/functions"
+	"github.com/lyraproj/puppet-evaluator/types"
+	"github.com/lyraproj/issue/issue"
+	"github.com/lyraproj/servicesdk/grpc"
+	"github.com/lyraproj/servicesdk/service"
+	"github.com/lyraproj/servicesdk/serviceapi"
 	"io/ioutil"
 	"unicode"
 
 	// Ensure initialization of needed packages
-	_ "github.com/puppetlabs/go-servicesdk/wf"
+	_ "github.com/lyraproj/servicesdk/wf"
 )
 
 const ManifestLoaderID = `Puppet::ManifestLoader`

@@ -1,4 +1,4 @@
-type Genesis::Aws::Resource = {
+type Lyra::Aws::Resource = {
   attributes => {
     ensure => Enum[absent, present],
     region => String,
@@ -6,7 +6,7 @@ type Genesis::Aws::Resource = {
   }
 }
 
-type Genesis::Aws::Vpc = Genesis::Aws::Resource{
+type Lyra::Aws::Vpc = Lyra::Aws::Resource{
   attributes => {
     vpc_id => { type => Optional[String], value => 'FAKED_VPC_ID' },
     cidr_block => String,
@@ -14,18 +14,18 @@ type Genesis::Aws::Vpc = Genesis::Aws::Resource{
     enable_dns_support => Boolean
   }
 }
-type Genesis::Aws::VpcHandler = {
+type Lyra::Aws::VpcHandler = {
   functions => {
-    read => Callable[[String], Optional[Genesis::Aws::Vpc]],
+    read => Callable[[String], Optional[Lyra::Aws::Vpc]],
     delete => Callable[[String], Boolean],
-    create => Callable[[Genesis::Aws::Vpc], Tuple[Genesis::Aws::Vpc,String]]
+    create => Callable[[Lyra::Aws::Vpc], Tuple[Lyra::Aws::Vpc,String]]
   }
 }
-function genesis::aws::vpchandler::read(String $external_id) >> Optional[Genesis::Aws::Vpc] {
+function lyra::aws::vpchandler::read(String $external_id) >> Optional[Lyra::Aws::Vpc] {
   return undef
 }
-function genesis::aws::vpchandler::create(Genesis::Aws::Vpc $r) >> Tuple[Genesis::Aws::Vpc,String] {
-  $rc = Genesis::Aws::Vpc(
+function lyra::aws::vpchandler::create(Lyra::Aws::Vpc $r) >> Tuple[Lyra::Aws::Vpc,String] {
+  $rc = Lyra::Aws::Vpc(
     ensure => $r.ensure,
     region => $r.region,
     tags => $r.tags,
@@ -36,13 +36,13 @@ function genesis::aws::vpchandler::create(Genesis::Aws::Vpc $r) >> Tuple[Genesis
   )
   return [$rc,$rc.vpc_id]
 }
-function genesis::aws::vpchandler::delete(String $external_id) >> Boolean {
+function lyra::aws::vpchandler::delete(String $external_id) >> Boolean {
   return true
 }
-register_handler(Genesis::Aws::Vpc, Genesis::Aws::VpcHandler())
+register_handler(Lyra::Aws::Vpc, Lyra::Aws::VpcHandler())
 
 
-type Genesis::Aws::Subnet = Genesis::Aws::Resource{
+type Lyra::Aws::Subnet = Lyra::Aws::Resource{
   attributes => {
     subnet_id => { type => Optional[String], value => 'FAKED_SUBNET_ID' },
     vpc_id => String,
@@ -50,18 +50,18 @@ type Genesis::Aws::Subnet = Genesis::Aws::Resource{
     map_public_ip_on_launch => Boolean
   }
 }
-type Genesis::Aws::SubnetHandler = {
+type Lyra::Aws::SubnetHandler = {
   functions => {
-    read => Callable[[String], Optional[Genesis::Aws::Subnet]],
+    read => Callable[[String], Optional[Lyra::Aws::Subnet]],
     delete => Callable[[String], Boolean],
-    create => Callable[[Genesis::Aws::Subnet], Tuple[Genesis::Aws::Subnet,String]]
+    create => Callable[[Lyra::Aws::Subnet], Tuple[Lyra::Aws::Subnet,String]]
   }
 }
-function genesis::aws::subnethandler::read(String $external_id) >> Optional[Genesis::Aws::Subnet] {
+function lyra::aws::subnethandler::read(String $external_id) >> Optional[Lyra::Aws::Subnet] {
   return undef
 }
-function genesis::aws::subnethandler::create(Genesis::Aws::Subnet $r) >> Tuple[Genesis::Aws::Subnet,String] {
-  $rc = Genesis::Aws::Subnet(
+function lyra::aws::subnethandler::create(Lyra::Aws::Subnet $r) >> Tuple[Lyra::Aws::Subnet,String] {
+  $rc = Lyra::Aws::Subnet(
     ensure => $r.ensure,
     region => $r.region,
     tags => $r.tags,
@@ -72,13 +72,13 @@ function genesis::aws::subnethandler::create(Genesis::Aws::Subnet $r) >> Tuple[G
   )
   return [$rc,$rc.subnet_id]
 }
-function genesis::aws::subnethandler::delete(String $external_id) >> Boolean {
+function lyra::aws::subnethandler::delete(String $external_id) >> Boolean {
   return true
 }
-register_handler(Genesis::Aws::Subnet, Genesis::Aws::SubnetHandler())
+register_handler(Lyra::Aws::Subnet, Lyra::Aws::SubnetHandler())
 
 
-type Genesis::Aws::Instance = Genesis::Aws::Resource{
+type Lyra::Aws::Instance = Lyra::Aws::Resource{
   attributes => {
     instance_id => { type => Optional[String], value => 'FAKED_INSTANCE_ID' },
     instance_type => String,
@@ -88,18 +88,18 @@ type Genesis::Aws::Instance = Genesis::Aws::Resource{
     private_ip => { type => Optional[String], value => 'FAKED_PRIVATE_IP' },
   }
 }
-type Genesis::Aws::InstanceHandler = {
+type Lyra::Aws::InstanceHandler = {
   functions => {
-    read => Callable[[String], Optional[Genesis::Aws::Instance]],
+    read => Callable[[String], Optional[Lyra::Aws::Instance]],
     delete => Callable[[String], Boolean],
-    create => Callable[[Genesis::Aws::Instance], Tuple[Genesis::Aws::Instance,String]]
+    create => Callable[[Lyra::Aws::Instance], Tuple[Lyra::Aws::Instance,String]]
   }
 }
-function genesis::aws::instancehandler::read(String $external_id) >> Optional[Genesis::Aws::Instance] {
+function lyra::aws::instancehandler::read(String $external_id) >> Optional[Lyra::Aws::Instance] {
   return undef
 }
-function genesis::aws::instancehandler::create(Genesis::Aws::Instance $r) >> Tuple[Genesis::Aws::Instance,String] {
-  $rc = Genesis::Aws::Instance(
+function lyra::aws::instancehandler::create(Lyra::Aws::Instance $r) >> Tuple[Lyra::Aws::Instance,String] {
+  $rc = Lyra::Aws::Instance(
     ensure => $r.ensure,
     region => $r.region,
     tags => $r.tags,
@@ -112,32 +112,32 @@ function genesis::aws::instancehandler::create(Genesis::Aws::Instance $r) >> Tup
   )
   return [$rc,$rc.instance_id]
 }
-function genesis::aws::instancehandler::delete(String $external_id) >> Boolean {
+function lyra::aws::instancehandler::delete(String $external_id) >> Boolean {
   return true
 }
-function genesis::aws::instancehandler::update(String $external_id, Genesis::Aws::Vpc $r) >> Genesis::Aws::Instance {
+function lyra::aws::instancehandler::update(String $external_id, Lyra::Aws::Vpc $r) >> Lyra::Aws::Instance {
   return $resource
 }
-register_handler(Genesis::Aws::Instance, Genesis::Aws::InstanceHandler())
+register_handler(Lyra::Aws::Instance, Lyra::Aws::InstanceHandler())
 
 
-type Genesis::Aws::InternetGateway = Genesis::Aws::Resource{
+type Lyra::Aws::InternetGateway = Lyra::Aws::Resource{
   attributes => {
     internet_gateway_id => { type => Optional[String], value => 'FAKED_GATEWAY_ID' }
   }
 }
-type Genesis::Aws::InternetGatewayHandler = {
+type Lyra::Aws::InternetGatewayHandler = {
   functions => {
-    read => Callable[[String], Optional[Genesis::Aws::InternetGateway]],
+    read => Callable[[String], Optional[Lyra::Aws::InternetGateway]],
     delete => Callable[[String], Boolean],
-    create => Callable[[Genesis::Aws::InternetGateway], Tuple[Genesis::Aws::InternetGateway,String]]
+    create => Callable[[Lyra::Aws::InternetGateway], Tuple[Lyra::Aws::InternetGateway,String]]
   }
 }
-function genesis::aws::internetGatewayhandler::read(String $external_id) >> Optional[Genesis::Aws::InternetGateway] {
+function lyra::aws::internetGatewayhandler::read(String $external_id) >> Optional[Lyra::Aws::InternetGateway] {
   return undef
 }
-function genesis::aws::internetGatewayhandler::create(Genesis::Aws::InternetGateway $r) >> Tuple[Genesis::Aws::InternetGateway,String] {
-  $rc = Genesis::Aws::InternetGateway(
+function lyra::aws::internetGatewayhandler::create(Lyra::Aws::InternetGateway $r) >> Tuple[Lyra::Aws::InternetGateway,String] {
+  $rc = Lyra::Aws::InternetGateway(
     ensure => $r.ensure,
     region => $r.region,
     tags => $r.tags,
@@ -145,13 +145,13 @@ function genesis::aws::internetGatewayhandler::create(Genesis::Aws::InternetGate
   )
   return [$rc,$rc.internet_gateway_id]
 }
-function genesis::aws::internetGatewayhandler::delete(String $external_id) >> Boolean {
+function lyra::aws::internetGatewayhandler::delete(String $external_id) >> Boolean {
   return true
 }
-register_handler(Genesis::Aws::InternetGateway, Genesis::Aws::InternetGatewayHandler())
+register_handler(Lyra::Aws::InternetGateway, Lyra::Aws::InternetGatewayHandler())
 
 workflow attach {
-  typespace => 'genesis::aws',
+  typespace => 'lyra::aws',
   input => (
     String $region = lookup('aws.region'),
     Hash[String,String] $tags = lookup('aws.tags'),

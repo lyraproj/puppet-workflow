@@ -1,6 +1,6 @@
 package puppet
 
-import "github.com/puppetlabs/go-issues/issue"
+import "github.com/lyraproj/issue/issue"
 
 const (
 	WF_FIELD_TYPE_MISMATCH          = `WF_FIELD_TYPE_MISMATCH`

@@ -60,7 +60,7 @@ func Start(serviceName string) {
 }
 
 func (m *manifestLoader) LoadManifest(fileName string) serviceapi.Definition {
-	c := m.ctx.Fork()
+	c := m.ctx // TODO: Concurrency issue here. Need common loader for all threads, but not common context
 	content, err := ioutil.ReadFile(fileName)
 	if err != nil {
 		panic(eval.Error(eval.EVAL_UNABLE_TO_READ_FILE, issue.H{`path`: fileName, `detail`: err.Error()}))

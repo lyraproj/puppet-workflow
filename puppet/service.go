@@ -29,15 +29,15 @@ type manifestService struct {
 }
 
 func (m *manifestService) Invoke(identifier, name string, arguments ...eval.Value) eval.Value {
-	return m.service.Invoke(m.ctx, identifier, name, arguments...)
+	return m.service.Invoke(m.ctx.Fork(), identifier, name, arguments...)
 }
 
 func (m *manifestService) Metadata() (eval.TypeSet, []serviceapi.Definition) {
-	return m.service.Metadata(m.ctx)
+	return m.service.Metadata(m.ctx.Fork())
 }
 
 func (m *manifestService) State(name string, input eval.OrderedMap) eval.PuppetObject {
-	return m.service.State(m.ctx, name, input)
+	return m.service.State(m.ctx.Fork(), name, input)
 }
 
 func WithService(serviceName string, sf func(c eval.Context, s serviceapi.Service)) {
@@ -85,7 +85,7 @@ func (m *manifestLoader) LoadManifest(fileName string) serviceapi.Definition {
 		panic(e)
 	}
 	s, _ := m.ctx.Get(`Puppet::ServiceLoader`)
-	return s.(*service.Server).AddApi(mf, &manifestService{m.ctx, sb.Server()})
+	return s.(*service.Server).AddApi(mf, &manifestService{c, sb.Server()})
 }
 
 func munge(path string) string {

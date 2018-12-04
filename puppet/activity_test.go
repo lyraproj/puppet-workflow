@@ -11,6 +11,7 @@ import (
 	"github.com/puppetlabs/go-servicesdk/serviceapi"
 	"os"
 	"os/exec"
+	"time"
 
 	//   Ensure Pcore and lookup are initialized
 	_ "github.com/puppetlabs/go-evaluator/pcore"
@@ -21,19 +22,31 @@ import (
 func withSampleService(sf func(eval.Context, serviceapi.Service)) {
 	eval.Puppet.Do(func(ctx eval.Context) {
 		// Command to start plug-in and read a given manifest
-		cmd := exec.Command("go", "run", "../main.go")
+		cmd := exec.Command("go", "run", "../main.go", "--debug")
 
 		// Logger that prints JSON on Stderr
 		logger := hclog.New(&hclog.LoggerOptions{
 			Level:      hclog.Debug,
 			Output:     os.Stderr,
-			JSONFormat: true,
+			JSONFormat: false,
+			IncludeLocation: false,
 		})
 
 		server, err := grpc.Load(cmd, logger)
 
 		// Ensure that plug-ins die when we're done.
-		defer	plugin.CleanupClients()
+		defer	func() {
+			wait := make(chan bool)
+			go func() {
+				plugin.CleanupClients()
+				wait <- true
+			}()
+
+			select {
+			case <- wait:
+			case <- time.After(2 * time.Second):
+			}
+		}()
 
 		if err == nil {
 			sf(ctx, server)

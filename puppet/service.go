@@ -3,6 +3,7 @@ package puppet
 import (
 	"bytes"
 	"github.com/puppetlabs/go-evaluator/eval"
+	"github.com/puppetlabs/go-puppet-dsl-workflow/puppet/functions"
 	"github.com/puppetlabs/go-evaluator/types"
 	"github.com/puppetlabs/go-issues/issue"
 	"github.com/puppetlabs/go-servicesdk/grpc"
@@ -10,9 +11,11 @@ import (
 	"github.com/puppetlabs/go-servicesdk/serviceapi"
 	"io/ioutil"
 	"unicode"
+
+	// Ensure initialization of needed packages
+	_ "github.com/puppetlabs/go-servicesdk/wf"
 )
 
-const ServerBuilderKey = `WF::ServerBuilder`
 const ManifestLoaderID = `Puppet::ManifestLoader`
 
 type manifestLoader struct {
@@ -76,7 +79,7 @@ func (m *manifestLoader) LoadManifest(fileName string) serviceapi.Definition {
 			sb.RegisterType(def.(eval.Type))
 		}
 	}
-	c.Set(ServerBuilderKey, sb)
+	c.Set(functions.ServerBuilderKey, sb)
 	_, e := eval.TopEvaluate(c, ast)
 	if e != nil {
 		panic(e)

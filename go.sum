@@ -18,14 +18,14 @@ github.com/lyraproj/data-protobuf v0.0.0-20181217135414-3d508204b820/go.mod h1:o
 github.com/lyraproj/issue v0.0.0-20181204205859-7ed1f9741f4a/go.mod h1:F3Zu9SjR6zROUIVdxgxuX0/Mi4npwgDRalQCNzCyzU0=
 github.com/lyraproj/issue v0.0.0-20181208172701-8d203563a8dc h1:OD9e7aHLSyJcrwG1R/8JsDVIWevC7aJH+Yd09q/8e2I=
 github.com/lyraproj/issue v0.0.0-20181208172701-8d203563a8dc/go.mod h1:F3Zu9SjR6zROUIVdxgxuX0/Mi4npwgDRalQCNzCyzU0=
-github.com/lyraproj/puppet-evaluator v0.0.0-20190114104021-a0233aa3f992 h1:6f6YlBg5p7Jtu6zlDMe322zksOFfvhU/zjnG5zeyKgs=
-github.com/lyraproj/puppet-evaluator v0.0.0-20190114104021-a0233aa3f992/go.mod h1:zzujLCRGe29CXjx2PYphNjYQAnasgzsz+np2ww6d3Mo=
+github.com/lyraproj/puppet-evaluator v0.0.0-20190119120541-966996aacfc1 h1:EG4KTpJR/ApxYUjmgrxua6A7DTcZiXbGRUEFtier9aw=
+github.com/lyraproj/puppet-evaluator v0.0.0-20190119120541-966996aacfc1/go.mod h1:zzujLCRGe29CXjx2PYphNjYQAnasgzsz+np2ww6d3Mo=
 github.com/lyraproj/puppet-parser v0.0.0-20181212205830-31c3104fe78d h1:iDn6XlJAiA+BuwG6L8xsCapPpc7jz24SGj9z7NQA1sg=
 github.com/lyraproj/puppet-parser v0.0.0-20181212205830-31c3104fe78d/go.mod h1:8va5g/XEw+jP9jnwEXPmanUy/hD9+6iggnaioihPLP0=
 github.com/lyraproj/semver v0.0.0-20181213164306-02ecea2cd6a2 h1:vb4PbiMtIXdhsOUinkkcqZiASDIZzXRhSG4yvNfE0tg=
 github.com/lyraproj/semver v0.0.0-20181213164306-02ecea2cd6a2/go.mod h1:KOdZKnEBdDb2iGPUnHiKpk3M5cvv949xMyj8XPqaMF0=
-github.com/lyraproj/servicesdk v0.0.0-20190114115155-827c6a18cad5 h1:ZsCx4AV9ASz/PLX2HtBc37g25xXgklbJaIQLEMZDNog=
-github.com/lyraproj/servicesdk v0.0.0-20190114115155-827c6a18cad5/go.mod h1:AoUr583WH52SBghq3Btx47pbE467w8hbkEu7Jr1CtjE=
+github.com/lyraproj/servicesdk v0.0.0-20190119121211-1908bd44546f h1:qC6DMF5hf1goTe3xokougypd1Z/GtCz+2OrOxF6nG+8=
+github.com/lyraproj/servicesdk v0.0.0-20190119121211-1908bd44546f/go.mod h1:BO8iBBHUNvE3bexG6bqUNOYwOxW9ltYTZtakTxKGVG0=
 github.com/mitchellh/go-testing-interface v0.0.0-20171004221916-a61a99592b77 h1:7GoSOOW2jpsfkntVKaS2rAr1TJqfcxotyaUcuxoZSzg=
 github.com/mitchellh/go-testing-interface v0.0.0-20171004221916-a61a99592b77/go.mod h1:kRemZodwjscx+RGhAo8eIhFbs2+BFgRtFPeD/KE+zxI=
 github.com/oklog/run v1.0.0 h1:Ru7dDtJNOyC66gQ5dQmaCa0qIsAUFY3sFpK1Xk8igrw=
@@ -47,6 +47,6 @@ google.golang.org/appengine v1.1.0/go.mod h1:EbEs0AVv82hx2wNQdGPgUI5lhzA/G0D9Ywl
 google.golang.org/genproto v0.0.0-20180817151627-c66870c02cf8 h1:Nw54tB0rB7hY/N0NQvRW8DG4Yk3Q6T9cu9RcFQDu1tc=
 google.golang.org/genproto v0.0.0-20180817151627-c66870c02cf8/go.mod h1:JiN7NxoALGmiZfu7CAH4rXhgtRTLTxftemlI0sWmxmc=
 google.golang.org/grpc v1.14.0/go.mod h1:yo6s7OP7yaDglbqo1J04qKzAhqBH6lvTonzMVmEdcZw=
-google.golang.org/grpc v1.17.0 h1:TRJYBgMclJvGYn2rIMjj+h9KtMt5r1Ij7ODVRIZkwhk=
-google.golang.org/grpc v1.17.0/go.mod h1:6QZJwpn2B+Zp71q/5VxRsJ6NXXVCE5NRUHRo+f3cWCs=
+google.golang.org/grpc v1.18.0 h1:IZl7mfBGfbhYx2p2rKRtYgDFw6SBz+kclmxYrCksPPA=
+google.golang.org/grpc v1.18.0/go.mod h1:6QZJwpn2B+Zp71q/5VxRsJ6NXXVCE5NRUHRo+f3cWCs=
 honnef.co/go/tools v0.0.0-20180728063816-88497007e858/go.mod h1:rf3lG4BRIbNafJWhAfAdb/ePZxsR/4RtNHQocxwk9r4=

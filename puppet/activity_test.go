@@ -190,8 +190,7 @@ func ExampleActivity() {
 	//       ),
 	//       Parameter(
 	//         'name' => 'nodes',
-	//         'type' => Hash[String, Struct
-	//           [{'public_ip' => String, 'private_ip' => String}]]
+	//         'type' => Hash[String, Struct[{'public_ip' => String, 'private_ip' => String}]]
 	//       )],
 	//     'activities' => [
 	//       Service::Definition(

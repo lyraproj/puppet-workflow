@@ -1,10 +1,10 @@
 package puppet
 
 import (
+	"github.com/lyraproj/issue/issue"
 	"github.com/lyraproj/puppet-evaluator/eval"
 	"github.com/lyraproj/puppet-evaluator/impl"
 	"github.com/lyraproj/puppet-evaluator/types"
-	"github.com/lyraproj/issue/issue"
 	"github.com/lyraproj/puppet-parser/parser"
 	"github.com/lyraproj/servicesdk/wfapi"
 	"strings"
@@ -191,7 +191,7 @@ func (a *puppetActivity) buildIterator(builder wfapi.IteratorBuilder) {
 	}
 
 	v = iteratorDef.Get5(`function`, eval.UNDEF)
-	style, ok := v.(*types.StringValue)
+	style, ok := v.(eval.StringValue)
 	if !ok {
 		panic(eval.Error(WF_FIELD_TYPE_MISMATCH, issue.H{`field`: `iteration.style`, `expected`: `String`, `actual`: v}))
 	}
@@ -338,7 +338,7 @@ func (a *puppetActivity) getResourceType(c eval.Context) eval.ObjectType {
 			if t, ok := tv.(eval.ObjectType); ok {
 				return t
 			}
-			if s, ok := tv.(*types.StringValue); ok {
+			if s, ok := tv.(eval.StringValue); ok {
 				n = s.String()
 			} else {
 				panic(eval.Error(WF_FIELD_TYPE_MISMATCH, issue.H{`field`: `definition`, `expected`: `Variant[String,ObjectType]`, `actual`: tv}))
@@ -380,7 +380,7 @@ func (a *puppetActivity) getStringProperty(field string) (string, bool) {
 		return ``, false
 	}
 
-	if s, ok := v.(*types.StringValue); ok {
+	if s, ok := v.(eval.StringValue); ok {
 		return s.String(), true
 	}
 	panic(eval.Error(WF_FIELD_TYPE_MISMATCH, issue.H{`field`: field, `expected`: `String`, `actual`: v.PType()}))

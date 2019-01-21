@@ -271,7 +271,7 @@ func (a *puppetActivity) getAPI(c eval.Context, input []eval.Parameter) eval.Pup
 		missing = `delete`
 	}
 	if missing != `` {
-		panic(c.Error(block, WF_MISSING_REQUIRED_FUNCION, issue.H{`function`: missing}))
+		panic(c.Error(block, WF_MISSING_REQUIRED_FUNCTION, issue.H{`function`: missing}))
 	}
 	if update == nil {
 		return NewCRD(a.Name(), create, read, remove)
@@ -344,7 +344,7 @@ func (a *puppetActivity) getResourceType(c eval.Context) eval.ObjectType {
 				panic(eval.Error(WF_FIELD_TYPE_MISMATCH, issue.H{`field`: `definition`, `expected`: `Variant[String,ObjectType]`, `actual`: tv}))
 			}
 		} else {
-			ts := a.getTypespace()
+			ts := a.getTypeSpace()
 			if ts != `` {
 				n = ts + `::` + wfapi.LeafName(n)
 			}
@@ -360,12 +360,12 @@ func (a *puppetActivity) getResourceType(c eval.Context) eval.ObjectType {
 	panic(eval.Error(eval.EVAL_UNRESOLVED_TYPE, issue.H{`typeString`: tn.Name()}))
 }
 
-func (a *puppetActivity) getTypespace() string {
+func (a *puppetActivity) getTypeSpace() string {
 	if ts, ok := a.getStringProperty(`typespace`); ok {
 		return ts
 	}
 	if a.parent != nil {
-		return a.parent.getTypespace()
+		return a.parent.getTypeSpace()
 	}
 	return ``
 }

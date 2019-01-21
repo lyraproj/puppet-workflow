@@ -2,10 +2,10 @@ package puppet
 
 import (
 	"bytes"
-	"github.com/lyraproj/puppet-evaluator/eval"
-	"github.com/lyraproj/puppet-workflow/puppet/functions"
-	"github.com/lyraproj/puppet-evaluator/types"
 	"github.com/lyraproj/issue/issue"
+	"github.com/lyraproj/puppet-evaluator/eval"
+	"github.com/lyraproj/puppet-evaluator/types"
+	"github.com/lyraproj/puppet-workflow/puppet/functions"
 	"github.com/lyraproj/servicesdk/grpc"
 	"github.com/lyraproj/servicesdk/service"
 	"github.com/lyraproj/servicesdk/serviceapi"
@@ -19,12 +19,12 @@ import (
 const ManifestLoaderID = `Puppet::ManifestLoader`
 
 type manifestLoader struct {
-	ctx eval.Context
+	ctx         eval.Context
 	serviceName string
 }
 
 type manifestService struct {
-	ctx eval.Context
+	ctx     eval.Context
 	service serviceapi.Service
 }
 
@@ -41,8 +41,8 @@ func (m *manifestService) State(name string, input eval.OrderedMap) eval.PuppetO
 }
 
 func WithService(serviceName string, sf func(c eval.Context, s serviceapi.Service)) {
-	eval.Puppet.Set(`tasks`, types.Boolean_TRUE)
-	eval.Puppet.Set(`workflow`, types.Boolean_TRUE)
+	eval.Puppet.Set(`tasks`, types.BooleanTrue)
+	eval.Puppet.Set(`workflow`, types.BooleanTrue)
 	eval.Puppet.Do(func(c eval.Context) {
 		sb := service.NewServerBuilder(c, serviceName)
 		sb.RegisterApiType(`Puppet::Service`, &manifestService{})
@@ -108,7 +108,7 @@ func munge(path string) string {
 		} else {
 			pu = true
 		}
- 	}
+	}
 	if ps {
 		b.Truncate(b.Len() - 2)
 	}

@@ -6,10 +6,12 @@ import (
 	"github.com/lyraproj/puppet-evaluator/eval"
 	"github.com/lyraproj/puppet-evaluator/types"
 	"github.com/lyraproj/puppet-workflow/puppet/functions"
+	"github.com/lyraproj/puppet-workflow/yaml"
 	"github.com/lyraproj/servicesdk/grpc"
 	"github.com/lyraproj/servicesdk/service"
 	"github.com/lyraproj/servicesdk/serviceapi"
 	"io/ioutil"
+	"strings"
 	"unicode"
 
 	// Ensure initialization of needed packages
@@ -65,30 +67,38 @@ func (m *manifestLoader) LoadManifest(fileName string) serviceapi.Definition {
 	if err != nil {
 		panic(eval.Error(eval.EVAL_UNABLE_TO_READ_FILE, issue.H{`path`: fileName, `detail`: err.Error()}))
 	}
-	ast := c.ParseAndValidate(fileName, string(content), false)
-	c.AddDefinitions(ast)
 
-	mf := munge(fileName)
+	mf := munged(fileName)
 	sb := service.NewServerBuilder(c, mf)
-	sb.RegisterStateConverter(ResolveState)
-	for _, def := range c.ResolveDefinitions() {
-		switch def.(type) {
-		case PuppetActivity:
-			sb.RegisterActivity(def.(PuppetActivity).Activity())
-		case eval.Type:
-			sb.RegisterType(def.(eval.Type))
-		}
-	}
 	c.Set(functions.ServerBuilderKey, sb)
-	_, e := eval.TopEvaluate(c, ast)
-	if e != nil {
-		panic(e)
+
+	if strings.HasSuffix(fileName, `.yaml`) {
+		// Assume YAML content instead of Puppet DSL
+		sb.RegisterStateConverter(yaml.ResolveState)
+		sb.RegisterActivity(yaml.CreateActivity(c, fileName, content))
+	} else {
+		ast := c.ParseAndValidate(fileName, string(content), false)
+		c.AddDefinitions(ast)
+
+		sb.RegisterStateConverter(ResolveState)
+		for _, def := range c.ResolveDefinitions() {
+			switch def.(type) {
+			case PuppetActivity:
+				sb.RegisterActivity(def.(PuppetActivity).Activity())
+			case eval.Type:
+				sb.RegisterType(def.(eval.Type))
+			}
+		}
+		_, e := eval.TopEvaluate(c, ast)
+		if e != nil {
+			panic(e)
+		}
 	}
 	s, _ := m.ctx.Get(`Puppet::ServiceLoader`)
 	return s.(*service.Server).AddApi(mf, &manifestService{c, sb.Server()})
 }
 
-func munge(path string) string {
+func munged(path string) string {
 	b := bytes.NewBufferString(``)
 	pu := true
 	ps := true

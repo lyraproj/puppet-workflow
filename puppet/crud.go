@@ -78,12 +78,12 @@ func (c *do) InitHash() eval.OrderedMap {
 	return types.SingletonHash2(`name`, types.WrapString(c.name))
 }
 
-func (d *do) Call(c eval.Context, method eval.ObjFunc, args []eval.Value, block eval.Lambda) (result eval.Value, ok bool) {
+func (c *do) Call(ctx eval.Context, method eval.ObjFunc, args []eval.Value, block eval.Lambda) (result eval.Value, ok bool) {
 	if method.Name() != `do` {
 		return nil, false
 	}
 	if block != nil {
-		panic(errors.NewArgumentsError(d.name, `nested lambdas are not supported`))
+		panic(errors.NewArgumentsError(c.name, `nested lambdas are not supported`))
 	}
 
 	defer func() {
@@ -98,7 +98,7 @@ func (d *do) Call(c eval.Context, method eval.ObjFunc, args []eval.Value, block 
 			}
 		}
 	}()
-	result = impl.CallBlock(c, d.name, d.parameters, method.Type().(*types.CallableType), d.body, args)
+	result = impl.CallBlock(ctx, c.name, c.parameters, method.Type().(*types.CallableType), c.body, args)
 	return
 }
 

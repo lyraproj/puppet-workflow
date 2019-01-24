@@ -107,6 +107,10 @@ func (a *activity) buildResource(builder wfapi.ResourceBuilder) {
 	builder.Input(input...)
 	builder.Output(a.extractParameters(builder.Context(), a.hash, `output`, true)...)
 	builder.State(&state{ctx: c, stateType: a.getResourceType(c), unresolvedState: st})
+
+	if extId, ok := a.getStringProperty(a.hash, `external_id`); ok {
+		builder.ExternalId(extId)
+	}
 }
 
 func (a *activity) buildStateless(builder wfapi.StatelessBuilder) {

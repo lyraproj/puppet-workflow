@@ -6,5 +6,5 @@ require (
 	github.com/lyraproj/issue v0.0.0-20190122215520-5efbea1d1edb
 	github.com/lyraproj/puppet-evaluator v0.0.0-20190124135843-af8c63460165
 	github.com/lyraproj/puppet-parser v0.0.0-20181212205830-31c3104fe78d
-	github.com/lyraproj/servicesdk v0.0.0-20190124140659-a7172b2817ef
+	github.com/lyraproj/servicesdk v0.0.0-20190124162644-fcee8c00c649
 )

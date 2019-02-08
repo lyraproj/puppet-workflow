@@ -5,13 +5,60 @@ import (
 	"github.com/lyraproj/puppet-evaluator/eval"
 	"github.com/lyraproj/puppet-workflow/yaml"
 	"github.com/lyraproj/servicesdk/service"
+	"github.com/lyraproj/servicesdk/serviceapi"
 	"io/ioutil"
 	"os"
-
 	// Ensure Pcore and lookup are initialized
 	_ "github.com/lyraproj/puppet-evaluator/pcore"
 	_ "github.com/lyraproj/servicesdk/wf"
 )
+
+func ExampleNestedObject() {
+	eval.Puppet.Do(func(ctx eval.Context) {
+		typesFile := "testdata/tf-k8s.pp"
+		content, err := ioutil.ReadFile(typesFile)
+		if err != nil {
+			panic(err.Error())
+		}
+		ast := ctx.ParseAndValidate(typesFile, string(content), false)
+		ctx.AddDefinitions(ast)
+		_, err = eval.TopEvaluate(ctx, ast)
+		if err != nil {
+			panic(err.Error())
+		}
+
+		workflowFile := "testdata/tf-k8s-sample.yaml"
+		content, err = ioutil.ReadFile(workflowFile)
+		if err != nil {
+			panic(err.Error())
+		}
+		a := yaml.CreateActivity(ctx, workflowFile, content)
+
+		sb := service.NewServerBuilder(ctx, `Yaml::Test`)
+		sb.RegisterStateConverter(yaml.ResolveState)
+		sb.RegisterActivity(a)
+		sv := sb.Server()
+		_, defs := sv.Metadata(ctx)
+
+		wf := defs[0]
+		ac, _ := wf.Properties().Get4(`activities`)
+		rs := ac.(eval.List).At(0).(serviceapi.Definition)
+
+		st := sv.State(ctx, rs.Identifier().Name(), eval.EMPTY_MAP)
+		st.ToString(os.Stdout, eval.PRETTY, nil)
+		fmt.Println()
+	})
+
+	// Output:
+	// TerraformKubernetes::Kubernetes_namespace(
+	//   'metadata' => TerraformKubernetes::Kubernetes_namespace_metadata_721(
+	//     'name' => 'terraform-lyra',
+	//     'resource_version' => 'hi',
+	//     'self_link' => 'me'
+	//   ),
+	//   'kubernetes_namespace_id' => 'ignore'
+	// )
+}
 
 func ExampleActivity() {
 	eval.Puppet.Do(func(ctx eval.Context) {

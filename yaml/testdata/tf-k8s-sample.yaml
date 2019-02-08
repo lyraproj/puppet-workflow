@@ -1,0 +1,13 @@
+k8s_namespace:
+  typespace: TerraformKubernetes
+  output:
+    kubernetes_namespace_id: String
+  activities:
+    kubernetes_namespace:
+      output: kubernetes_namespace_id
+      state:
+        kubernetes_namespace_id: "ignore"
+        metadata:
+          name: "terraform-lyra"
+          resource_version: "hi"
+          self_link: "me"

@@ -12,7 +12,7 @@ import (
 const ServerBuilderKey = `WF::ServerBuilder`
 
 func init() {
-	eval.NewGoFunction(`register_handler`,
+	eval.NewGoFunction(`registerHandler`,
 		func(d eval.Dispatch) {
 			d.Param(`Type[Object]`)
 			d.Param(`Object`)

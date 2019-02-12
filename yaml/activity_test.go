@@ -127,7 +127,7 @@ func ExampleActivity() {
 	//         )
 	//       ),
 	//       Parameter(
-	//         'name' => 'key_name',
+	//         'name' => 'keyName',
 	//         'type' => String,
 	//         'value' => Deferred(
 	//           'name' => 'lookup',
@@ -135,7 +135,7 @@ func ExampleActivity() {
 	//         )
 	//       ),
 	//       Parameter(
-	//         'name' => 'ec2_cnt',
+	//         'name' => 'ec2Cnt',
 	//         'type' => Integer,
 	//         'value' => Deferred(
 	//           'name' => 'lookup',
@@ -144,20 +144,20 @@ func ExampleActivity() {
 	//       )],
 	//     'output' => [
 	//       Parameter(
-	//         'name' => 'vpc_id',
+	//         'name' => 'vpcId',
 	//         'type' => String
 	//       ),
 	//       Parameter(
-	//         'name' => 'subnet_id',
+	//         'name' => 'subnetId',
 	//         'type' => String
 	//       ),
 	//       Parameter(
-	//         'name' => 'internet_gateway_id',
+	//         'name' => 'internetGatewayId',
 	//         'type' => String
 	//       ),
 	//       Parameter(
 	//         'name' => 'nodes',
-	//         'type' => Hash[String, Struct[{'public_ip' => String, 'private_ip' => String}]]
+	//         'type' => Hash[String, Struct[{'publicIp' => String, 'privateIp' => String}]]
 	//       )],
 	//     'activities' => [
 	//       Service::Definition(
@@ -181,10 +181,10 @@ func ExampleActivity() {
 	//             )],
 	//           'output' => [
 	//             Parameter(
-	//               'name' => 'vpc_id',
+	//               'name' => 'vpcId',
 	//               'type' => Optional[String]
 	//             )],
-	//           'resource_type' => Lyra::Aws::Vpc,
+	//           'resourceType' => Lyra::Aws::Vpc,
 	//           'style' => 'resource'
 	//         }
 	//       ),
@@ -204,7 +204,7 @@ func ExampleActivity() {
 	//               'type' => String
 	//             ),
 	//             Parameter(
-	//               'name' => 'vpc_id',
+	//               'name' => 'vpcId',
 	//               'type' => String
 	//             ),
 	//             Parameter(
@@ -213,10 +213,10 @@ func ExampleActivity() {
 	//             )],
 	//           'output' => [
 	//             Parameter(
-	//               'name' => 'subnet_id',
+	//               'name' => 'subnetId',
 	//               'type' => Optional[String]
 	//             )],
-	//           'resource_type' => Lyra::Aws::Subnet,
+	//           'resourceType' => Lyra::Aws::Subnet,
 	//           'style' => 'resource'
 	//         }
 	//       ),
@@ -230,10 +230,10 @@ func ExampleActivity() {
 	//           'name' => 'Yaml::Test'
 	//         ),
 	//         'properties' => {
-	//           'iteration_style' => 'times',
+	//           'iterationStyle' => 'times',
 	//           'over' => [
 	//             Parameter(
-	//               'name' => 'ec2_cnt',
+	//               'name' => 'ec2Cnt',
 	//               'type' => Any
 	//             )],
 	//           'variables' => [
@@ -261,7 +261,7 @@ func ExampleActivity() {
 	//                   'type' => Optional[String]
 	//                 ),
 	//                 Parameter(
-	//                   'name' => 'key_name',
+	//                   'name' => 'keyName',
 	//                   'type' => String
 	//                 ),
 	//                 Parameter(
@@ -272,14 +272,14 @@ func ExampleActivity() {
 	//                 Parameter(
 	//                   'name' => 'key',
 	//                   'type' => Optional[String],
-	//                   'value' => 'instance_id'
+	//                   'value' => 'instanceId'
 	//                 ),
 	//                 Parameter(
 	//                   'name' => 'value',
 	//                   'type' => Tuple[Optional[String], Optional[String]],
-	//                   'value' => ['public_ip', 'private_ip']
+	//                   'value' => ['publicIp', 'privateIp']
 	//                 )],
-	//               'resource_type' => Lyra::Aws::Instance,
+	//               'resourceType' => Lyra::Aws::Instance,
 	//               'style' => 'resource'
 	//             }
 	//           ),
@@ -307,10 +307,10 @@ func ExampleActivity() {
 	//             )],
 	//           'output' => [
 	//             Parameter(
-	//               'name' => 'internet_gateway_id',
+	//               'name' => 'internetGatewayId',
 	//               'type' => Optional[String]
 	//             )],
-	//           'resource_type' => Lyra::Aws::InternetGateway,
+	//           'resourceType' => Lyra::Aws::InternetGateway,
 	//           'style' => 'resource'
 	//         }
 	//       )],
@@ -324,8 +324,8 @@ func ExampleActivity() {
 	//     'a' => 'av',
 	//     'b' => 'bv'
 	//   },
-	//   'cidr_block' => '192.168.0.0/16',
-	//   'enable_dns_hostnames' => true,
-	//   'enable_dns_support' => true
+	//   'cidrBlock' => '192.168.0.0/16',
+	//   'enableDnsHostnames' => true,
+	//   'enableDnsSupport' => true
 	// )
 }

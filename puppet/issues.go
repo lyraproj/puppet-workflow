@@ -18,5 +18,5 @@ func init() {
 	issue.Hard(WF_INVALID_FUNCTION, `invalid function '%{function}'. Expected one of 'create', 'read', 'update', or 'delete'`)
 	issue.Hard(WF_MISSING_REQUIRED_FUNCTION, `missing required '%{function}'`)
 	issue.Hard2(WF_NOT_ACTIVITY, `block may only contain workflow activities. %{actual} is not supported here`,
-		issue.HF{`actual`: issue.A_anUc})
+		issue.HF{`actual`: issue.UcAnOrA})
 }

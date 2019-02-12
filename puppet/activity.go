@@ -93,7 +93,7 @@ func (a *puppetActivity) buildResource(builder wfapi.ResourceBuilder) {
 	a.buildActivity(builder)
 	c := builder.Context()
 	builder.State(&state{ctx: c, stateType: a.getResourceType(c), unresolvedState: a.getState(c)})
-	if extId, ok := a.getStringProperty(`external_id`); ok {
+	if extId, ok := a.getStringProperty(`externalId`); ok {
 		builder.ExternalId(extId)
 	}
 }

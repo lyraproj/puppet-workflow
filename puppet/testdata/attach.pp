@@ -8,10 +8,10 @@ type Lyra::Aws::Resource = {
 
 type Lyra::Aws::Vpc = Lyra::Aws::Resource{
   attributes => {
-    vpc_id => { type => Optional[String], value => 'FAKED_VPC_ID' },
-    cidr_block => String,
-    enable_dns_hostnames => Boolean,
-    enable_dns_support => Boolean
+    vpcId => { type => Optional[String], value => 'FAKED_VPC_ID' },
+    cidrBlock => String,
+    enableDnsHostnames => Boolean,
+    enableDnsSupport => Boolean
   }
 }
 type Lyra::Aws::VpcHandler = {
@@ -21,7 +21,7 @@ type Lyra::Aws::VpcHandler = {
     create => Callable[[Lyra::Aws::Vpc], Tuple[Lyra::Aws::Vpc,String]]
   }
 }
-function lyra::aws::vpchandler::read(String $external_id) >> Optional[Lyra::Aws::Vpc] {
+function lyra::aws::vpchandler::read(String $externalId) >> Optional[Lyra::Aws::Vpc] {
   return undef
 }
 function lyra::aws::vpchandler::create(Lyra::Aws::Vpc $r) >> Tuple[Lyra::Aws::Vpc,String] {
@@ -29,25 +29,25 @@ function lyra::aws::vpchandler::create(Lyra::Aws::Vpc $r) >> Tuple[Lyra::Aws::Vp
     ensure => $r.ensure,
     region => $r.region,
     tags => $r.tags,
-    vpc_id => 'external-vpc-id',
-    cidr_block => $r.cidr_block,
-    enable_dns_hostnames => $r.enable_dns_hostnames,
-    enable_dns_support => $r.enable_dns_support
+    vpcId => 'external-vpc-id',
+    cidrBlock => $r.cidrBlock,
+    enableDnsHostnames => $r.enableDnsHostnames,
+    enableDnsSupport => $r.enableDnsSupport
   )
-  return [$rc,$rc.vpc_id]
+  return [$rc,$rc.vpcId]
 }
-function lyra::aws::vpchandler::delete(String $external_id) >> Boolean {
+function lyra::aws::vpchandler::delete(String $externalId) >> Boolean {
   return true
 }
-register_handler(Lyra::Aws::Vpc, Lyra::Aws::VpcHandler())
+registerHandler(Lyra::Aws::Vpc, Lyra::Aws::VpcHandler())
 
 
 type Lyra::Aws::Subnet = Lyra::Aws::Resource{
   attributes => {
-    subnet_id => { type => Optional[String], value => 'FAKED_SUBNET_ID' },
-    vpc_id => String,
-    cidr_block => String,
-    map_public_ip_on_launch => Boolean
+    subnetId => { type => Optional[String], value => 'FAKED_SUBNET_ID' },
+    vpcId => String,
+    cidrBlock => String,
+    mapPublicIpOnLaunch => Boolean
   }
 }
 type Lyra::Aws::SubnetHandler = {
@@ -57,7 +57,7 @@ type Lyra::Aws::SubnetHandler = {
     create => Callable[[Lyra::Aws::Subnet], Tuple[Lyra::Aws::Subnet,String]]
   }
 }
-function lyra::aws::subnethandler::read(String $external_id) >> Optional[Lyra::Aws::Subnet] {
+function lyra::aws::subnethandler::read(String $externalId) >> Optional[Lyra::Aws::Subnet] {
   return undef
 }
 function lyra::aws::subnethandler::create(Lyra::Aws::Subnet $r) >> Tuple[Lyra::Aws::Subnet,String] {
@@ -65,27 +65,27 @@ function lyra::aws::subnethandler::create(Lyra::Aws::Subnet $r) >> Tuple[Lyra::A
     ensure => $r.ensure,
     region => $r.region,
     tags => $r.tags,
-    subnet_id => 'external-subnet-id',
-    vpc_id => $r.vpc_id,
-    cidr_block => $r.cidr_block,
-    map_public_ip_on_launch => $r.map_public_ip_on_launch
+    subnetId => 'external-subnet-id',
+    vpcId => $r.vpcId,
+    cidrBlock => $r.cidrBlock,
+    mapPublicIpOnLaunch => $r.mapPublicIpOnLaunch
   )
-  return [$rc,$rc.subnet_id]
+  return [$rc,$rc.subnetId]
 }
-function lyra::aws::subnethandler::delete(String $external_id) >> Boolean {
+function lyra::aws::subnethandler::delete(String $externalId) >> Boolean {
   return true
 }
-register_handler(Lyra::Aws::Subnet, Lyra::Aws::SubnetHandler())
+registerHandler(Lyra::Aws::Subnet, Lyra::Aws::SubnetHandler())
 
 
 type Lyra::Aws::Instance = Lyra::Aws::Resource{
   attributes => {
-    instance_id => { type => Optional[String], value => 'FAKED_INSTANCE_ID' },
-    instance_type => String,
-    image_id => String,
-    key_name => String,
-    public_ip => { type => Optional[String], value => 'FAKED_PUBLIC_IP' },
-    private_ip => { type => Optional[String], value => 'FAKED_PRIVATE_IP' },
+    instanceId => { type => Optional[String], value => 'FAKED_INSTANCE_ID' },
+    instanceType => String,
+    imageId => String,
+    keyName => String,
+    publicIp => { type => Optional[String], value => 'FAKED_PUBLIC_IP' },
+    privateIp => { type => Optional[String], value => 'FAKED_PRIVATE_IP' },
   }
 }
 type Lyra::Aws::InstanceHandler = {
@@ -95,7 +95,7 @@ type Lyra::Aws::InstanceHandler = {
     create => Callable[[Lyra::Aws::Instance], Tuple[Lyra::Aws::Instance,String]]
   }
 }
-function lyra::aws::instancehandler::read(String $external_id) >> Optional[Lyra::Aws::Instance] {
+function lyra::aws::instancehandler::read(String $externalId) >> Optional[Lyra::Aws::Instance] {
   return undef
 }
 function lyra::aws::instancehandler::create(Lyra::Aws::Instance $r) >> Tuple[Lyra::Aws::Instance,String] {
@@ -103,27 +103,27 @@ function lyra::aws::instancehandler::create(Lyra::Aws::Instance $r) >> Tuple[Lyr
     ensure => $r.ensure,
     region => $r.region,
     tags => $r.tags,
-    instance_id => 'external-instance-id',
-    instance_type => $r.instance_type,
-    image_id => $r.image_id,
-    key_name => $r.key_name,
-    public_ip => '192.168.0.20',
-    private_ip => '192.168.1.20'
+    instanceId => 'external-instance-id',
+    instanceType => $r.instanceType,
+    imageId => $r.imageId,
+    keyName => $r.keyName,
+    publicIp => '192.168.0.20',
+    privateIp => '192.168.1.20'
   )
-  return [$rc,$rc.instance_id]
+  return [$rc,$rc.instanceId]
 }
-function lyra::aws::instancehandler::delete(String $external_id) >> Boolean {
+function lyra::aws::instancehandler::delete(String $externalId) >> Boolean {
   return true
 }
-function lyra::aws::instancehandler::update(String $external_id, Lyra::Aws::Vpc $r) >> Lyra::Aws::Instance {
+function lyra::aws::instancehandler::update(String $externalId, Lyra::Aws::Vpc $r) >> Lyra::Aws::Instance {
   return $resource
 }
-register_handler(Lyra::Aws::Instance, Lyra::Aws::InstanceHandler())
+registerHandler(Lyra::Aws::Instance, Lyra::Aws::InstanceHandler())
 
 
 type Lyra::Aws::InternetGateway = Lyra::Aws::Resource{
   attributes => {
-    internet_gateway_id => { type => Optional[String], value => 'FAKED_GATEWAY_ID' }
+    internetGatewayId => { type => Optional[String], value => 'FAKED_GATEWAY_ID' }
   }
 }
 type Lyra::Aws::InternetGatewayHandler = {
@@ -133,7 +133,7 @@ type Lyra::Aws::InternetGatewayHandler = {
     create => Callable[[Lyra::Aws::InternetGateway], Tuple[Lyra::Aws::InternetGateway,String]]
   }
 }
-function lyra::aws::internetGatewayhandler::read(String $external_id) >> Optional[Lyra::Aws::InternetGateway] {
+function lyra::aws::internetGatewayhandler::read(String $externalId) >> Optional[Lyra::Aws::InternetGateway] {
   return undef
 }
 function lyra::aws::internetGatewayhandler::create(Lyra::Aws::InternetGateway $r) >> Tuple[Lyra::Aws::InternetGateway,String] {
@@ -141,70 +141,70 @@ function lyra::aws::internetGatewayhandler::create(Lyra::Aws::InternetGateway $r
     ensure => $r.ensure,
     region => $r.region,
     tags => $r.tags,
-    internet_gateway_id => 'external-internet_gateway_id'
+    internetGatewayId => 'external-internetGatewayId'
   )
-  return [$rc,$rc.internet_gateway_id]
+  return [$rc,$rc.internetGatewayId]
 }
-function lyra::aws::internetGatewayhandler::delete(String $external_id) >> Boolean {
+function lyra::aws::internetGatewayhandler::delete(String $externalId) >> Boolean {
   return true
 }
-register_handler(Lyra::Aws::InternetGateway, Lyra::Aws::InternetGatewayHandler())
+registerHandler(Lyra::Aws::InternetGateway, Lyra::Aws::InternetGatewayHandler())
 
 workflow attach {
   typespace => 'lyra::aws',
   input => (
     String $region = lookup('aws.region'),
     Hash[String,String] $tags = lookup('aws.tags'),
-    String $key_name = lookup('aws.keyname'),
-    Integer $ec2_cnt = lookup('aws.instance.count')
+    String $keyName = lookup('aws.keyname'),
+    Integer $ec2Cnt = lookup('aws.instance.count')
   ),
   output => (
-    String $vpc_id,
-    String $subnet_id,
-    String $internet_gateway_id,
-    Hash[String, Struct[public_ip => String, private_ip => String]] $nodes
+    String $vpcId,
+    String $subnetId,
+    String $internetGatewayId,
+    Hash[String, Struct[publicIp => String, privateIp => String]] $nodes
   )
 } {
   resource vpc {
     input  => ($region, $tags),
-    output => ($vpc_id)
+    output => ($vpcId)
   }{
     ensure => present,
     region => $region,
-    cidr_block => '192.168.0.0/16',
+    cidrBlock => '192.168.0.0/16',
     tags => $tags,
-    enable_dns_hostnames => true,
-    enable_dns_support => true
+    enableDnsHostnames => true,
+    enableDnsSupport => true
   }
 
   resource subnet {
-    input  => ($region, $tags, $vpc_id),
-    output => ($subnet_id)
+    input  => ($region, $tags, $vpcId),
+    output => ($subnetId)
   }{
     ensure => present,
     region => $region,
-    vpc_id => $vpc_id,
-    cidr_block => '192.168.1.0/24',
+    vpcId => $vpcId,
+    cidrBlock => '192.168.1.0/24',
     tags => $tags,
-    map_public_ip_on_launch => true
+    mapPublicIpOnLaunch => true
   }
 
   resource instance {
-    input => ($n, $region, $key_name, $tags),
-    output => ($key = instance_id, $value = (public_ip, private_ip))
-  } $nodes = times($ec2_cnt) |$n| {
+    input => ($n, $region, $keyName, $tags),
+    output => ($key = instanceId, $value = (publicIp, privateIp))
+  } $nodes = times($ec2Cnt) |$n| {
     region => $region,
     ensure => present,
-    instance_id => String($n, '%X'),
-    image_id => 'ami-f90a4880',
-    instance_type => 't2.nano',
-    key_name => $key_name,
+    instanceId => String($n, '%X'),
+    imageId => 'ami-f90a4880',
+    instanceType => 't2.nano',
+    keyName => $keyName,
     tags => $tags
   }
 
   resource internetgateway {
     input => ($region, $tags),
-    output => ($internet_gateway_id)
+    output => ($internetGatewayId)
   } {
     ensure => present,
     region => $region,

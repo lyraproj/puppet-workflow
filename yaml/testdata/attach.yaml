@@ -7,56 +7,56 @@
      tags:
        type: Hash[String,String]
        lookup: aws.tags
-     key_name:
+     keyName:
        type: String
        lookup: aws.keyname
-     ec2_cnt:
+     ec2Cnt:
        type: Integer
        lookup: aws.instance.count
    output:
-     vpc_id: String
-     subnet_id: String
-     internet_gateway_id: String
-     nodes: Hash[String,Struct[public_ip=>String,private_ip=>String]]
+     vpcId: String
+     subnetId: String
+     internetGatewayId: String
+     nodes: Hash[String,Struct[publicIp=>String,privateIp=>String]]
    activities:
      vpc:
-       output: vpc_id
+       output: vpcId
        state:
          ensure              : present
          region              : $region
-         cidr_block          : 192.168.0.0/16
+         cidrBlock           : 192.168.0.0/16
          tags                : $tags
-         enable_dns_hostnames: true
-         enable_dns_support  : true
+         enableDnsHostnames: true
+         enableDnsSupport  : true
      subnet:
-       output: subnet_id
+       output: subnetId
        state:
          ensure                 : present
          region                 : $region
-         vpc_id                 : $vpc_id
-         cidr_block             : 192.168.1.0/24
+         vpcId                  : $vpcId
+         cidrBlock              : 192.168.1.0/24
          tags                   : $tags
-         map_public_ip_on_launch: true
+         mapPublicIpOnLaunch: true
      instance:
        output:
-         key: instance_id
-         value: [public_ip, private_ip]
+         key: instanceId
+         value: [publicIp, privateIp]
        iteration:
          name:     nodes
          function: times
-         over:     ec2_cnt
+         over:     ec2Cnt
          vars:     i
        state:
-         region       : $region
-         ensure       : present
-         instance_id  : $i
-         image_id     : ami-f90a4880
-         instance_type: t2.nano
-         key_name     : $key_name
-         tags         : $tags
+         region      : $region
+         ensure      : present
+         instanceId  : $i
+         imageId     : ami-f90a4880
+         instanceType: t2.nano
+         keyName     : $keyName
+         tags        : $tags
      gw:
        type: Lyra::Aws::InternetGateway
-       output: internet_gateway_id
+       output: internetGatewayId
        state:
          ensure: present
          region: $region

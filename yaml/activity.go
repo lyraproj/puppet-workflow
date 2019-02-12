@@ -248,7 +248,7 @@ func (a *activity) extractParameters(c eval.Context, props eval.OrderedMap, fiel
 					params[i] = impl.NewParameter(n, types.DefaultAnyType(), nil, false)
 				}
 			} else {
-				panic(eval.Error(WF_BAD_PARAMETER, issue.H{`activity`: a, `name`: e, `parameter_type`: field}))
+				panic(eval.Error(WF_BAD_PARAMETER, issue.H{`activity`: a, `name`: e, `parameterType`: field}))
 			}
 		})
 		return params
@@ -288,7 +288,7 @@ func (a *activity) makeInputParameter(c eval.Context, field string, k, v eval.Va
 	}
 	if param == nil {
 		panic(eval.Error(WF_BAD_PARAMETER, issue.H{
-			`activity`: a, `name`: k, `parameter_type`: `input`}))
+			`activity`: a, `name`: k, `parameterType`: `input`}))
 	}
 	return
 }
@@ -335,7 +335,7 @@ func (a *activity) makeOutputParameter(c eval.Context, field string, k, v eval.V
 	}
 	if param == nil {
 		panic(eval.Error(WF_BAD_PARAMETER, issue.H{
-			`activity`: a, `name`: k, `parameter_type`: `output`}))
+			`activity`: a, `name`: k, `parameterType`: `output`}))
 	}
 	return
 }

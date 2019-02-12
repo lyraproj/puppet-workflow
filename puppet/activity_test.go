@@ -26,16 +26,16 @@ func withSampleService(sf func(eval.Context, serviceapi.Service)) {
 
 		// Logger that prints JSON on Stderr
 		logger := hclog.New(&hclog.LoggerOptions{
-			Level:      hclog.Debug,
-			Output:     os.Stderr,
-			JSONFormat: false,
+			Level:           hclog.Debug,
+			Output:          os.Stderr,
+			JSONFormat:      false,
 			IncludeLocation: false,
 		})
 
 		server, err := grpc.Load(cmd, logger)
 
 		// Ensure that plug-ins die when we're done.
-		defer	func() {
+		defer func() {
 			wait := make(chan bool)
 			go func() {
 				plugin.CleanupClients()
@@ -43,8 +43,8 @@ func withSampleService(sf func(eval.Context, serviceapi.Service)) {
 			}()
 
 			select {
-			case <- wait:
-			case <- time.After(2 * time.Second):
+			case <-wait:
+			case <-time.After(2 * time.Second):
 			}
 		}()
 
@@ -63,7 +63,7 @@ func withSampleLocalService(sf func(eval.Context, serviceapi.Service)) {
 func ExampleActivity() {
 	withSampleService(func(ctx eval.Context, s serviceapi.Service) {
 		s.Metadata(ctx)
-		rs := s.Invoke(ctx, puppet.ManifestLoaderID, "load_manifest", types.WrapString("testdata/attach.pp")).(serviceapi.Definition)
+		rs := s.Invoke(ctx, puppet.ManifestLoaderID, "loadManifest", types.WrapString("testdata/attach.pp")).(serviceapi.Definition)
 		v := s.Invoke(ctx, rs.Identifier().Name(), "metadata").(eval.List)
 		dl := v.At(1).(eval.List)
 		dl.Each(func(def eval.Value) {
@@ -84,7 +84,7 @@ func ExampleActivity() {
 	//   'properties' => {
 	//     'interface' => Lyra::Aws::InstanceHandler,
 	//     'style' => 'callable',
-	//     'handler_for' => Lyra::Aws::Instance
+	//     'handlerFor' => Lyra::Aws::Instance
 	//   }
 	// )
 	// Service::Definition(
@@ -99,7 +99,7 @@ func ExampleActivity() {
 	//   'properties' => {
 	//     'interface' => Lyra::Aws::InternetGatewayHandler,
 	//     'style' => 'callable',
-	//     'handler_for' => Lyra::Aws::InternetGateway
+	//     'handlerFor' => Lyra::Aws::InternetGateway
 	//   }
 	// )
 	// Service::Definition(
@@ -114,7 +114,7 @@ func ExampleActivity() {
 	//   'properties' => {
 	//     'interface' => Lyra::Aws::SubnetHandler,
 	//     'style' => 'callable',
-	//     'handler_for' => Lyra::Aws::Subnet
+	//     'handlerFor' => Lyra::Aws::Subnet
 	//   }
 	// )
 	// Service::Definition(
@@ -129,7 +129,7 @@ func ExampleActivity() {
 	//   'properties' => {
 	//     'interface' => Lyra::Aws::VpcHandler,
 	//     'style' => 'callable',
-	//     'handler_for' => Lyra::Aws::Vpc
+	//     'handlerFor' => Lyra::Aws::Vpc
 	//   }
 	// )
 	// Service::Definition(
@@ -160,7 +160,7 @@ func ExampleActivity() {
 	//         )
 	//       ),
 	//       Parameter(
-	//         'name' => 'key_name',
+	//         'name' => 'keyName',
 	//         'type' => String,
 	//         'value' => Deferred(
 	//           'name' => 'lookup',
@@ -168,7 +168,7 @@ func ExampleActivity() {
 	//         )
 	//       ),
 	//       Parameter(
-	//         'name' => 'ec2_cnt',
+	//         'name' => 'ec2Cnt',
 	//         'type' => Integer,
 	//         'value' => Deferred(
 	//           'name' => 'lookup',
@@ -177,20 +177,20 @@ func ExampleActivity() {
 	//       )],
 	//     'output' => [
 	//       Parameter(
-	//         'name' => 'vpc_id',
+	//         'name' => 'vpcId',
 	//         'type' => String
 	//       ),
 	//       Parameter(
-	//         'name' => 'subnet_id',
+	//         'name' => 'subnetId',
 	//         'type' => String
 	//       ),
 	//       Parameter(
-	//         'name' => 'internet_gateway_id',
+	//         'name' => 'internetGatewayId',
 	//         'type' => String
 	//       ),
 	//       Parameter(
 	//         'name' => 'nodes',
-	//         'type' => Hash[String, Struct[{'public_ip' => String, 'private_ip' => String}]]
+	//         'type' => Hash[String, Struct[{'publicIp' => String, 'privateIp' => String}]]
 	//       )],
 	//     'activities' => [
 	//       Service::Definition(
@@ -214,10 +214,10 @@ func ExampleActivity() {
 	//             )],
 	//           'output' => [
 	//             Parameter(
-	//               'name' => 'vpc_id',
+	//               'name' => 'vpcId',
 	//               'type' => Any
 	//             )],
-	//           'resource_type' => Lyra::Aws::Vpc,
+	//           'resourceType' => Lyra::Aws::Vpc,
 	//           'style' => 'resource'
 	//         }
 	//       ),
@@ -241,15 +241,15 @@ func ExampleActivity() {
 	//               'type' => Any
 	//             ),
 	//             Parameter(
-	//               'name' => 'vpc_id',
+	//               'name' => 'vpcId',
 	//               'type' => Any
 	//             )],
 	//           'output' => [
 	//             Parameter(
-	//               'name' => 'subnet_id',
+	//               'name' => 'subnetId',
 	//               'type' => Any
 	//             )],
-	//           'resource_type' => Lyra::Aws::Subnet,
+	//           'resourceType' => Lyra::Aws::Subnet,
 	//           'style' => 'resource'
 	//         }
 	//       ),
@@ -263,10 +263,10 @@ func ExampleActivity() {
 	//           'name' => 'Testdata::AttachPp'
 	//         ),
 	//         'properties' => {
-	//           'iteration_style' => 'times',
+	//           'iterationStyle' => 'times',
 	//           'over' => [
 	//             Parameter(
-	//               'name' => 'ec2_cnt',
+	//               'name' => 'ec2Cnt',
 	//               'type' => Any
 	//             )],
 	//           'variables' => [
@@ -294,7 +294,7 @@ func ExampleActivity() {
 	//                   'type' => Any
 	//                 ),
 	//                 Parameter(
-	//                   'name' => 'key_name',
+	//                   'name' => 'keyName',
 	//                   'type' => Any
 	//                 ),
 	//                 Parameter(
@@ -305,14 +305,14 @@ func ExampleActivity() {
 	//                 Parameter(
 	//                   'name' => 'key',
 	//                   'type' => Any,
-	//                   'value' => 'instance_id'
+	//                   'value' => 'instanceId'
 	//                 ),
 	//                 Parameter(
 	//                   'name' => 'value',
 	//                   'type' => Any,
-	//                   'value' => ['public_ip', 'private_ip']
+	//                   'value' => ['publicIp', 'privateIp']
 	//                 )],
-	//               'resource_type' => Lyra::Aws::Instance,
+	//               'resourceType' => Lyra::Aws::Instance,
 	//               'style' => 'resource'
 	//             }
 	//           ),
@@ -340,10 +340,10 @@ func ExampleActivity() {
 	//             )],
 	//           'output' => [
 	//             Parameter(
-	//               'name' => 'internet_gateway_id',
+	//               'name' => 'internetGatewayId',
 	//               'type' => Any
 	//             )],
-	//           'resource_type' => Lyra::Aws::InternetGateway,
+	//           'resourceType' => Lyra::Aws::InternetGateway,
 	//           'style' => 'resource'
 	//         }
 	//       )],
@@ -384,16 +384,16 @@ func ExampleDelete() {
 	//     //   Node definitions.
 	//     vpc [label="vpc{
 	//   input:[region,tags],
-	//   output:[vpc_id]}"];
+	//   output:[vpcId]}"];
 	//     subnet [label="subnet{
-	//   input:[region,tags,vpc_id],
-	//   output:[subnet_id]}"];
+	//   input:[region,tags,vpcId],
+	//   output:[subnetId]}"];
 	//     instance [label="instance{
-	//   input:[ec2_cnt,region,key_name,tags],
+	//   input:[ec2Cnt,region,keyName,tags],
 	//   output:[nodes]}"];
 	//     internetgateway [label="internetgateway{
 	//   input:[region,tags],
-	//   output:[internet_gateway_id]}"];
+	//   output:[internetGatewayId]}"];
 	//
 	//     //   Edge definitions.
 	//     subnet -> vpc;

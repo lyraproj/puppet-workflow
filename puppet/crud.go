@@ -86,6 +86,7 @@ func (c *do) Call(ctx eval.Context, method eval.ObjFunc, args []eval.Value, bloc
 		panic(errors.NewArgumentsError(c.name, `nested lambdas are not supported`))
 	}
 
+	ok = true
 	defer func() {
 		if err := recover(); err != nil {
 			switch err.(type) {

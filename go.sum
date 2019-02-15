@@ -7,8 +7,9 @@ github.com/golang/mock v1.1.1/go.mod h1:oTYuIxOrZwtPieC+H1uAHpcLFnEyAGVDL/k47Jfb
 github.com/golang/protobuf v1.2.0 h1:P3YflyNX/ehuJFLhxviNdFxQPkGK5cDcApsge1SqnvM=
 github.com/golang/protobuf v1.2.0/go.mod h1:6lQm79b+lXiMfvg/cZm0SGofjICqVBUtrP5yJMmIC1U=
 github.com/hashicorp/go-hclog v0.0.0-20180709165350-ff2cf002a8dd/go.mod h1:9bjs9uLqI8l75knNv3lV1kA55veR+WUPSiKIWcQHudI=
-github.com/hashicorp/go-hclog v0.0.0-20190109152822-4783caec6f2e h1:SS6R03q1M5bxjbOL2JziQUUu7opiRocL4R2H5Y2I6rY=
 github.com/hashicorp/go-hclog v0.0.0-20190109152822-4783caec6f2e/go.mod h1:5CU+agLiy3J7N7QjHK5d05KxGsuXiQLrjA0H7acj2lQ=
+github.com/hashicorp/go-hclog v0.0.0-20190214225846-90f2fbc4844c h1:R2zfxK0MnLcVuS5rqLZ5EBj6gqkXVcJOh9CsILZC9mY=
+github.com/hashicorp/go-hclog v0.0.0-20190214225846-90f2fbc4844c/go.mod h1:5CU+agLiy3J7N7QjHK5d05KxGsuXiQLrjA0H7acj2lQ=
 github.com/hashicorp/go-plugin v0.0.0-20190212232519-b838ffee39ce h1:I3KJUf8jyMubLFeHit2ibr9YeVxJX2CXMXVM6xlB+Qk=
 github.com/hashicorp/go-plugin v0.0.0-20190212232519-b838ffee39ce/go.mod h1:++UyYGoz3o5w9ZzAdZxtQKrWWP+iqPBn3cQptSMzBuY=
 github.com/hashicorp/yamux v0.0.0-20180604194846-3520598351bb h1:b5rjCoWHc7eqmAS4/qyk21ZsHyb6Mxv/jykxvNTkU4M=
@@ -24,8 +25,8 @@ github.com/lyraproj/puppet-parser v0.0.0-20190213110921-6d794c46c75a h1:XG/JMQTV
 github.com/lyraproj/puppet-parser v0.0.0-20190213110921-6d794c46c75a/go.mod h1:KYBqLHpK7D2FNFp47m9BZfr6Xvd6PnEYOpI31aEGAX0=
 github.com/lyraproj/semver v0.0.0-20181213164306-02ecea2cd6a2 h1:vb4PbiMtIXdhsOUinkkcqZiASDIZzXRhSG4yvNfE0tg=
 github.com/lyraproj/semver v0.0.0-20181213164306-02ecea2cd6a2/go.mod h1:KOdZKnEBdDb2iGPUnHiKpk3M5cvv949xMyj8XPqaMF0=
-github.com/lyraproj/servicesdk v0.0.0-20190213111125-9b344bb575d1 h1:f5fbA3fPFgQQYhXnGd5Rx+jg2Px1GnxIqtpMHiDSu8E=
-github.com/lyraproj/servicesdk v0.0.0-20190213111125-9b344bb575d1/go.mod h1:TszLWROByVHvGy/7kMLJRCjXvDG0oCPu+2cjP6nF+YQ=
+github.com/lyraproj/servicesdk v0.0.0-20190215155324-03dc27163cc2 h1:Yb9hHXVPmUFDQU1cRSzarrw205SCYtEEtJBrCS7QytI=
+github.com/lyraproj/servicesdk v0.0.0-20190215155324-03dc27163cc2/go.mod h1:TszLWROByVHvGy/7kMLJRCjXvDG0oCPu+2cjP6nF+YQ=
 github.com/mitchellh/go-testing-interface v0.0.0-20171004221916-a61a99592b77 h1:7GoSOOW2jpsfkntVKaS2rAr1TJqfcxotyaUcuxoZSzg=
 github.com/mitchellh/go-testing-interface v0.0.0-20171004221916-a61a99592b77/go.mod h1:kRemZodwjscx+RGhAo8eIhFbs2+BFgRtFPeD/KE+zxI=
 github.com/oklog/run v1.0.0 h1:Ru7dDtJNOyC66gQ5dQmaCa0qIsAUFY3sFpK1Xk8igrw=

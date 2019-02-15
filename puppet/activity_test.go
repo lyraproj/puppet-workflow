@@ -61,7 +61,7 @@ func withSampleLocalService(sf func(eval.Context, serviceapi.Service)) {
 }
 
 func ExampleActivity() {
-	withSampleService(func(ctx eval.Context, s serviceapi.Service) {
+	withSampleLocalService(func(ctx eval.Context, s serviceapi.Service) {
 		s.Metadata(ctx)
 		rs := s.Invoke(ctx, puppet.ManifestLoaderID, "loadManifest", types.WrapString("testdata/attach.pp")).(serviceapi.Definition)
 		v := s.Invoke(ctx, rs.Identifier().Name(), "metadata").(eval.List)
@@ -72,6 +72,34 @@ func ExampleActivity() {
 	})
 
 	// Output:
+	// Service::Definition(
+	//   'identifier' => TypedName(
+	//     'namespace' => 'definition',
+	//     'name' => 'Attach::Notice'
+	//   ),
+	//   'serviceId' => TypedName(
+	//     'namespace' => 'service',
+	//     'name' => 'Testdata::AttachPp'
+	//   ),
+	//   'properties' => {
+	//     'interface' => Puppet::Do,
+	//     'style' => 'callable'
+	//   }
+	// )
+	// Service::Definition(
+	//   'identifier' => TypedName(
+	//     'namespace' => 'definition',
+	//     'name' => 'Attach::Notice2'
+	//   ),
+	//   'serviceId' => TypedName(
+	//     'namespace' => 'service',
+	//     'name' => 'Testdata::AttachPp'
+	//   ),
+	//   'properties' => {
+	//     'interface' => Puppet::Do,
+	//     'style' => 'callable'
+	//   }
+	// )
 	// Service::Definition(
 	//   'identifier' => TypedName(
 	//     'namespace' => 'definition',
@@ -191,6 +219,14 @@ func ExampleActivity() {
 	//       Parameter(
 	//         'name' => 'nodes',
 	//         'type' => Hash[String, Struct[{'publicIp' => String, 'privateIp' => String}]]
+	//       ),
+	//       Parameter(
+	//         'name' => 'notice',
+	//         'type' => String
+	//       ),
+	//       Parameter(
+	//         'name' => 'notice2',
+	//         'type' => String
 	//       )],
 	//     'activities' => [
 	//       Service::Definition(
@@ -219,6 +255,54 @@ func ExampleActivity() {
 	//             )],
 	//           'resourceType' => Lyra::Aws::Vpc,
 	//           'style' => 'resource'
+	//         }
+	//       ),
+	//       Service::Definition(
+	//         'identifier' => TypedName(
+	//           'namespace' => 'definition',
+	//           'name' => 'attach::notice'
+	//         ),
+	//         'serviceId' => TypedName(
+	//           'namespace' => 'service',
+	//           'name' => 'Testdata::AttachPp'
+	//         ),
+	//         'properties' => {
+	//           'input' => [
+	//             Parameter(
+	//               'name' => 'vpcId',
+	//               'type' => Any
+	//             )],
+	//           'output' => [
+	//             Parameter(
+	//               'name' => 'notice',
+	//               'type' => String
+	//             )],
+	//           'interface' => Puppet::Do,
+	//           'style' => 'stateless'
+	//         }
+	//       ),
+	//       Service::Definition(
+	//         'identifier' => TypedName(
+	//           'namespace' => 'definition',
+	//           'name' => 'attach::notice2'
+	//         ),
+	//         'serviceId' => TypedName(
+	//           'namespace' => 'service',
+	//           'name' => 'Testdata::AttachPp'
+	//         ),
+	//         'properties' => {
+	//           'input' => [
+	//             Parameter(
+	//               'name' => 'subnetId',
+	//               'type' => Any
+	//             )],
+	//           'output' => [
+	//             Parameter(
+	//               'name' => 'notice2',
+	//               'type' => String
+	//             )],
+	//           'interface' => Puppet::Do,
+	//           'style' => 'stateless'
 	//         }
 	//       ),
 	//       Service::Definition(
@@ -350,53 +434,4 @@ func ExampleActivity() {
 	//     'style' => 'workflow'
 	//   }
 	// )
-	//
 }
-
-/*
-type allExists struct{}
-
-func (allExists) Exists(identity string) bool {
-	return true
-}
-
-func ExampleDelete() {
-	eval.Puppet.Set(`tasks`, types.Boolean_TRUE)
-	eval.Puppet.Set(`workflow`, types.Boolean_TRUE)
-	err := lookup.DoWithParent(context.Background(), provider, func(ctx lookup.Context) error {
-		wf, err := sampleWorkflow(ctx)
-		if err != nil {
-			return err
-		}
-		we := wfe.NewWorkflowEngine(wf)
-		we.BuildInvertedGraph(&allExists{})
-		//   return ioutil.WriteFile(os.Getenv("HOME") + "/tmp/wf.dot", we.GraphAsDot(), 0644)
-		fmt.Println(string(we.GraphAsDot()))
-		return nil
-	})
-
-	if err != nil {
-		fmt.Println(err.Error())
-	}
-
-	//   Output:
-	//   strict digraph attach {
-	//     //   Node definitions.
-	//     vpc [label="vpc{
-	//   input:[region,tags],
-	//   output:[vpcId]}"];
-	//     subnet [label="subnet{
-	//   input:[region,tags,vpcId],
-	//   output:[subnetId]}"];
-	//     instance [label="instance{
-	//   input:[ec2Cnt,region,keyName,tags],
-	//   output:[nodes]}"];
-	//     internetgateway [label="internetgateway{
-	//   input:[region,tags],
-	//   output:[internetGatewayId]}"];
-	//
-	//     //   Edge definitions.
-	//     subnet -> vpc;
-	//   }
-}
-*/

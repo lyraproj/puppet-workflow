@@ -162,7 +162,9 @@ workflow attach {
     String $vpcId,
     String $subnetId,
     String $internetGatewayId,
-    Hash[String, Struct[publicIp => String, privateIp => String]] $nodes
+    Hash[String, Struct[publicIp => String, privateIp => String]] $nodes,
+    String $notice,
+    String $notice2
   )
 } {
   resource vpc {
@@ -175,6 +177,21 @@ workflow attach {
     tags => $tags,
     enableDnsHostnames => true,
     enableDnsSupport => true
+  }
+
+  function notice($vpcId) >> Struct[notice=>String] {
+    $s = "created VPC with ID ${vpcId}"
+    notice("created VPC with ID ${vpcId}")
+    return { notice=>$s }
+  }
+
+  stateless notice2 {
+    input => ($subnetId),
+    output => (String $notice2)
+  } {
+    $s = "created Subnet with ID ${subnetId}"
+    notice($s)
+    return { notice2 => $s }
   }
 
   resource subnet {

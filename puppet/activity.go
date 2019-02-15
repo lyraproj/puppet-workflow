@@ -19,16 +19,9 @@ type PuppetActivity interface {
 type puppetActivity struct {
 	name       string
 	parent     *puppetActivity
-	expression *parser.ActivityExpression
+	expression parser.Expression
 	properties eval.OrderedMap
 	activity   wfapi.Activity
-}
-
-type puppetStateless struct {
-	name       string
-	parent     *puppetActivity
-	expression *parser.FunctionDefinition
-	activity   wfapi.Stateless
 }
 
 func init() {
@@ -47,14 +40,14 @@ func (a *puppetActivity) Name() string {
 
 func (a *puppetActivity) Resolve(c eval.Context) {
 	if a.activity == nil {
-		switch a.expression.Style() {
-		case parser.ActivityStyleAction:
+		switch a.Style() {
+		case `action`:
 			a.activity = wfapi.NewAction(c, a.buildAction)
-		case parser.ActivityStyleWorkflow:
+		case `workflow`:
 			a.activity = wfapi.NewWorkflow(c, a.buildWorkflow)
-		case parser.ActivityStyleResource:
+		case `resource`:
 			a.activity = wfapi.NewResource(c, a.buildResource)
-		case parser.ActivityStyleStateless:
+		case `stateless`:
 			a.activity = wfapi.NewStateless(c, a.buildStateless)
 		}
 	}
@@ -99,35 +92,35 @@ func (a *puppetActivity) buildResource(builder wfapi.ResourceBuilder) {
 }
 
 func (a *puppetActivity) buildStateless(builder wfapi.StatelessBuilder) {
-	a.buildActivity(builder)
-}
-
-func (a *puppetStateless) Name() string {
-	return a.name
-}
-
-func (a *puppetStateless) buildStateless(builder wfapi.StatelessBuilder) {
-	fn := impl.NewPuppetFunction(a.expression)
-	fn.Resolve(builder.Context())
-	builder.Name(fn.Name())
-	builder.Input(fn.Parameters()...)
-	s := fn.Signature()
-	rt := s.ReturnType()
-	if rt != nil {
-		if st, ok := rt.(*types.StructType); ok {
-			es := st.Elements()
-			ps := make([]eval.Parameter, len(es))
-			for i, e := range es {
-				ps[i] = impl.NewParameter(e.Name(), e.Value(), nil, false)
+	if fd, ok := a.expression.(*parser.FunctionDefinition); ok {
+		fn := impl.NewPuppetFunction(fd)
+		fn.Resolve(builder.Context())
+		builder.Name(fn.Name())
+		builder.Input(fn.Parameters()...)
+		builder.Doer(&do{name: fn.Name(), body: fd.Body(), parameters: fn.Parameters()})
+		s := fn.Signature()
+		rt := s.ReturnType()
+		if rt != nil {
+			if st, ok := rt.(*types.StructType); ok {
+				es := st.Elements()
+				ps := make([]eval.Parameter, len(es))
+				for i, e := range es {
+					ps[i] = impl.NewParameter(e.Name(), e.Value(), nil, false)
+				}
+				builder.Output(ps...)
 			}
-			builder.Output(ps...)
 		}
+		return
+	}
+	if ae, ok := a.expression.(*parser.ActivityExpression); ok {
+		a.buildActivity(builder)
+		builder.Doer(&do{name: builder.GetName(), body: ae.Definition(), parameters: builder.GetInput()})
 	}
 }
 
 func (a *puppetActivity) buildWorkflow(builder wfapi.WorkflowBuilder) {
 	a.buildActivity(builder)
-	de := a.expression.Definition()
+	de := a.expression.(*parser.ActivityExpression).Definition()
 	if de == nil {
 		return
 	}
@@ -142,7 +135,7 @@ func (a *puppetActivity) buildWorkflow(builder wfapi.WorkflowBuilder) {
 		if as, ok := stmt.(*parser.ActivityExpression); ok {
 			a.workflowActivity(builder, as)
 		} else if fn, ok := stmt.(*parser.FunctionDefinition); ok {
-			ac := &puppetStateless{parent: a, expression: fn}
+			ac := &puppetActivity{parent: a, expression: fn}
 			builder.Stateless(ac.buildStateless)
 		} else {
 			panic(eval.Error(WF_NOT_ACTIVITY, issue.H{`actual`: stmt}))
@@ -169,7 +162,10 @@ func (a *puppetActivity) workflowActivity(builder wfapi.WorkflowBuilder, as *par
 }
 
 func (a *puppetActivity) Style() string {
-	return string(a.expression.Style())
+	if _, ok := a.expression.(*parser.FunctionDefinition); ok {
+		return `stateless`
+	}
+	return string(a.expression.(*parser.ActivityExpression).Style())
 }
 
 func (a *puppetActivity) inferInput() []eval.Parameter {
@@ -205,20 +201,26 @@ func (a *puppetActivity) buildIterator(builder wfapi.IteratorBuilder) {
 	builder.Over(a.extractParameters(iteratorDef, `params`, noParamsFunc)...)
 	builder.Variables(a.extractParameters(iteratorDef, `vars`, noParamsFunc)...)
 
-	switch a.expression.Style() {
-	case parser.ActivityStyleAction:
+	switch a.Style() {
+	case `action`:
 		builder.Action(a.buildAction)
-	case parser.ActivityStyleWorkflow:
+	case `workflow`:
 		builder.Workflow(a.buildWorkflow)
-	case parser.ActivityStyleResource:
+	case `resource`:
 		builder.Resource(a.buildResource)
-	case parser.ActivityStyleStateless:
+	case `stateless`:
 		builder.Stateless(a.buildStateless)
 	}
 }
 
 func (a *puppetActivity) getAPI(c eval.Context, input []eval.Parameter) eval.PuppetObject {
-	de := a.expression.Definition()
+	var de parser.Expression
+	if ae, ok := a.expression.(*parser.ActivityExpression); ok {
+		de = ae.Definition()
+	} else {
+		// The block is the function
+		return NewDo(a.Name(), input, a.expression)
+	}
 	if de == nil {
 		panic(c.Error(a.expression, WF_NO_DEFINITION, issue.NO_ARGS))
 	}
@@ -226,19 +228,6 @@ func (a *puppetActivity) getAPI(c eval.Context, input []eval.Parameter) eval.Pup
 	block, ok := de.(*parser.BlockExpression)
 	if !ok {
 		panic(c.Error(de, WF_FIELD_TYPE_MISMATCH, issue.H{`field`: `definition`, `expected`: `CodeBlock`, `actual`: de}))
-	}
-
-	hasFunctions := false
-	for _, e := range block.Statements() {
-		if _, ok = e.(*parser.FunctionDefinition); ok {
-			hasFunctions = true
-			break
-		}
-	}
-
-	if !hasFunctions {
-		// The block is the function
-		return NewDo(a.Name(), input, block)
 	}
 
 	// Block must only consist of functions the functions create, read, update, and delete.
@@ -322,7 +311,11 @@ func (a *puppetActivity) extractParameters(props eval.OrderedMap, field string, 
 }
 
 func (a *puppetActivity) getState(c eval.Context) eval.OrderedMap {
-	de := a.expression.Definition()
+	ae, ok := a.expression.(*parser.ActivityExpression)
+	if !ok {
+		return eval.EMPTY_MAP
+	}
+	de := ae.Definition()
 	if de == nil {
 		return eval.EMPTY_MAP
 	}

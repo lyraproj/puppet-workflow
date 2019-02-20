@@ -185,7 +185,7 @@ workflow attach {
     return { notice=>$s }
   }
 
-  stateless notice2 {
+  action notice2 {
     input => ($subnetId),
     output => (String $notice2)
   } {

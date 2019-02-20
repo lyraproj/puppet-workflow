@@ -278,7 +278,7 @@ func ExampleActivity() {
 	//               'type' => String
 	//             )],
 	//           'interface' => Puppet::Do,
-	//           'style' => 'stateless'
+	//           'style' => 'action'
 	//         }
 	//       ),
 	//       Service::Definition(
@@ -302,7 +302,7 @@ func ExampleActivity() {
 	//               'type' => String
 	//             )],
 	//           'interface' => Puppet::Do,
-	//           'style' => 'stateless'
+	//           'style' => 'action'
 	//         }
 	//       ),
 	//       Service::Definition(

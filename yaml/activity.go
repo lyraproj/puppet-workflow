@@ -113,7 +113,7 @@ func (a *activity) buildResource(builder wfapi.ResourceBuilder) {
 	}
 }
 
-func (a *activity) buildStateless(builder wfapi.StatelessBuilder) {
+func (a *activity) buildAction(builder wfapi.ActionBuilder) {
 	a.buildActivity(builder)
 }
 

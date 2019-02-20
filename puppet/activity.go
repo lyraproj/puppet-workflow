@@ -41,14 +41,14 @@ func (a *puppetActivity) Name() string {
 func (a *puppetActivity) Resolve(c eval.Context) {
 	if a.activity == nil {
 		switch a.Style() {
-		case `action`:
-			a.activity = wfapi.NewAction(c, a.buildAction)
+		case `stateHandler`:
+			a.activity = wfapi.NewStateHandler(c, a.buildStateHandler)
 		case `workflow`:
 			a.activity = wfapi.NewWorkflow(c, a.buildWorkflow)
 		case `resource`:
 			a.activity = wfapi.NewResource(c, a.buildResource)
-		case `stateless`:
-			a.activity = wfapi.NewStateless(c, a.buildStateless)
+		case `action`:
+			a.activity = wfapi.NewAction(c, a.buildAction)
 		}
 	}
 }
@@ -77,7 +77,7 @@ func newActivity(c eval.Context, parent *puppetActivity, ex *parser.ActivityExpr
 	return ca
 }
 
-func (a *puppetActivity) buildAction(builder wfapi.ActionBuilder) {
+func (a *puppetActivity) buildStateHandler(builder wfapi.StateHandlerBuilder) {
 	a.buildActivity(builder)
 	builder.API(a.getAPI(builder.Context(), builder.GetInput()))
 }
@@ -91,7 +91,7 @@ func (a *puppetActivity) buildResource(builder wfapi.ResourceBuilder) {
 	}
 }
 
-func (a *puppetActivity) buildStateless(builder wfapi.StatelessBuilder) {
+func (a *puppetActivity) buildAction(builder wfapi.ActionBuilder) {
 	if fd, ok := a.expression.(*parser.FunctionDefinition); ok {
 		fn := impl.NewPuppetFunction(fd)
 		fn.Resolve(builder.Context())
@@ -136,7 +136,7 @@ func (a *puppetActivity) buildWorkflow(builder wfapi.WorkflowBuilder) {
 			a.workflowActivity(builder, as)
 		} else if fn, ok := stmt.(*parser.FunctionDefinition); ok {
 			ac := &puppetActivity{parent: a, expression: fn}
-			builder.Stateless(ac.buildStateless)
+			builder.Action(ac.buildAction)
 		} else {
 			panic(eval.Error(WF_NOT_ACTIVITY, issue.H{`actual`: stmt}))
 		}
@@ -149,21 +149,21 @@ func (a *puppetActivity) workflowActivity(builder wfapi.WorkflowBuilder, as *par
 		builder.Iterator(ac.buildIterator)
 	} else {
 		switch as.Style() {
-		case parser.ActivityStyleAction:
-			builder.Action(ac.buildAction)
+		case parser.ActivityStyleStateHandler:
+			builder.StateHandler(ac.buildStateHandler)
 		case parser.ActivityStyleWorkflow:
 			builder.Workflow(ac.buildWorkflow)
 		case parser.ActivityStyleResource:
 			builder.Resource(ac.buildResource)
-		case parser.ActivityStyleStateless:
-			builder.Stateless(ac.buildStateless)
+		case parser.ActivityStyleAction:
+			builder.Action(ac.buildAction)
 		}
 	}
 }
 
 func (a *puppetActivity) Style() string {
 	if _, ok := a.expression.(*parser.FunctionDefinition); ok {
-		return `stateless`
+		return `action`
 	}
 	return string(a.expression.(*parser.ActivityExpression).Style())
 }
@@ -202,14 +202,14 @@ func (a *puppetActivity) buildIterator(builder wfapi.IteratorBuilder) {
 	builder.Variables(a.extractParameters(iteratorDef, `vars`, noParamsFunc)...)
 
 	switch a.Style() {
-	case `action`:
-		builder.Action(a.buildAction)
+	case `stateHandler`:
+		builder.StateHandler(a.buildStateHandler)
 	case `workflow`:
 		builder.Workflow(a.buildWorkflow)
 	case `resource`:
 		builder.Resource(a.buildResource)
-	case `stateless`:
-		builder.Stateless(a.buildStateless)
+	case `action`:
+		builder.Action(a.buildAction)
 	}
 }
 

@@ -1,8 +1,7 @@
 type Lyra::Aws::Resource = {
   attributes => {
-    ensure => Enum[absent, present],
     region => String,
-    tags => Hash[String,String]
+    tags => Optional[Hash[String,String]]
   }
 }
 
@@ -37,6 +36,7 @@ type Lyra::Aws::Instance = Lyra::Aws::Resource{
 
 type Lyra::Aws::InternetGateway = Lyra::Aws::Resource{
   attributes => {
-    internetGatewayId => { type => Optional[String], value => 'FAKED_GATEWAY_ID' }
+    internetGatewayId => { type => Optional[String], value => 'FAKED_GATEWAY_ID' },
+    nestedInfo => { type => Optional[Hash[String,Hash[String,String]]], value => undef }
   }
 }

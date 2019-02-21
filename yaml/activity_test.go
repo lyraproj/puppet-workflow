@@ -88,10 +88,14 @@ func ExampleActivity() {
 		_, defs := sv.Metadata(ctx)
 
 		wf := defs[0]
-		wf.ToString(os.Stdout, eval.PRETTY, nil)
-		fmt.Println()
+		if av, ok := wf.Properties().Get4(`activities`); ok {
+			if al, ok := av.(eval.List); ok {
+				al.At(2).ToString(os.Stdout, eval.PRETTY, nil)
+				fmt.Println()
+			}
+		}
 
-		st := sv.State(ctx, `attach::vpc`, eval.Wrap(ctx, map[string]interface{}{
+		st := sv.State(ctx, `attach::gw`, eval.Wrap(ctx, map[string]interface{}{
 			`region`: `us-west`,
 			`tags`:   map[string]string{`a`: `av`, `b`: `bv`}}).(eval.OrderedMap))
 		st.ToString(os.Stdout, eval.PRETTY, nil)
@@ -102,230 +106,76 @@ func ExampleActivity() {
 	// Service::Definition(
 	//   'identifier' => TypedName(
 	//     'namespace' => 'definition',
-	//     'name' => 'attach'
+	//     'name' => 'attach::nodes'
 	//   ),
 	//   'serviceId' => TypedName(
 	//     'namespace' => 'service',
 	//     'name' => 'Yaml::Test'
 	//   ),
 	//   'properties' => {
-	//     'input' => [
-	//       Parameter(
-	//         'name' => 'region',
-	//         'type' => String,
-	//         'value' => Deferred(
-	//           'name' => 'lookup',
-	//           'arguments' => ['aws.region']
-	//         )
-	//       ),
-	//       Parameter(
-	//         'name' => 'tags',
-	//         'type' => Hash[String, String],
-	//         'value' => Deferred(
-	//           'name' => 'lookup',
-	//           'arguments' => ['aws.tags']
-	//         )
-	//       ),
-	//       Parameter(
-	//         'name' => 'keyName',
-	//         'type' => String,
-	//         'value' => Deferred(
-	//           'name' => 'lookup',
-	//           'arguments' => ['aws.keyname']
-	//         )
-	//       ),
+	//     'iterationStyle' => 'times',
+	//     'over' => [
 	//       Parameter(
 	//         'name' => 'ec2Cnt',
-	//         'type' => Integer,
-	//         'value' => Deferred(
-	//           'name' => 'lookup',
-	//           'arguments' => ['aws.instance.count']
-	//         )
+	//         'type' => Any
 	//       )],
-	//     'output' => [
+	//     'variables' => [
 	//       Parameter(
-	//         'name' => 'vpcId',
-	//         'type' => String
-	//       ),
-	//       Parameter(
-	//         'name' => 'subnetId',
-	//         'type' => String
-	//       ),
-	//       Parameter(
-	//         'name' => 'internetGatewayId',
-	//         'type' => String
-	//       ),
-	//       Parameter(
-	//         'name' => 'nodes',
-	//         'type' => Hash[String, Struct[{'publicIp' => String, 'privateIp' => String}]]
+	//         'name' => 'i',
+	//         'type' => Any
 	//       )],
-	//     'activities' => [
-	//       Service::Definition(
-	//         'identifier' => TypedName(
-	//           'namespace' => 'definition',
-	//           'name' => 'attach::vpc'
-	//         ),
-	//         'serviceId' => TypedName(
-	//           'namespace' => 'service',
-	//           'name' => 'Yaml::Test'
-	//         ),
-	//         'properties' => {
-	//           'input' => [
-	//             Parameter(
-	//               'name' => 'region',
-	//               'type' => String
-	//             ),
-	//             Parameter(
-	//               'name' => 'tags',
-	//               'type' => Hash[String, String]
-	//             )],
-	//           'output' => [
-	//             Parameter(
-	//               'name' => 'vpcId',
-	//               'type' => Optional[String]
-	//             )],
-	//           'resourceType' => Lyra::Aws::Vpc,
-	//           'style' => 'resource'
-	//         }
+	//     'producer' => Service::Definition(
+	//       'identifier' => TypedName(
+	//         'namespace' => 'definition',
+	//         'name' => 'attach::instance'
 	//       ),
-	//       Service::Definition(
-	//         'identifier' => TypedName(
-	//           'namespace' => 'definition',
-	//           'name' => 'attach::subnet'
-	//         ),
-	//         'serviceId' => TypedName(
-	//           'namespace' => 'service',
-	//           'name' => 'Yaml::Test'
-	//         ),
-	//         'properties' => {
-	//           'input' => [
-	//             Parameter(
-	//               'name' => 'region',
-	//               'type' => String
-	//             ),
-	//             Parameter(
-	//               'name' => 'vpcId',
-	//               'type' => String
-	//             ),
-	//             Parameter(
-	//               'name' => 'tags',
-	//               'type' => Hash[String, String]
-	//             )],
-	//           'output' => [
-	//             Parameter(
-	//               'name' => 'subnetId',
-	//               'type' => Optional[String]
-	//             )],
-	//           'resourceType' => Lyra::Aws::Subnet,
-	//           'style' => 'resource'
-	//         }
+	//       'serviceId' => TypedName(
+	//         'namespace' => 'service',
+	//         'name' => 'Yaml::Test'
 	//       ),
-	//       Service::Definition(
-	//         'identifier' => TypedName(
-	//           'namespace' => 'definition',
-	//           'name' => 'attach::nodes'
-	//         ),
-	//         'serviceId' => TypedName(
-	//           'namespace' => 'service',
-	//           'name' => 'Yaml::Test'
-	//         ),
-	//         'properties' => {
-	//           'iterationStyle' => 'times',
-	//           'over' => [
-	//             Parameter(
-	//               'name' => 'ec2Cnt',
-	//               'type' => Any
-	//             )],
-	//           'variables' => [
-	//             Parameter(
-	//               'name' => 'i',
-	//               'type' => Any
-	//             )],
-	//           'producer' => Service::Definition(
-	//             'identifier' => TypedName(
-	//               'namespace' => 'definition',
-	//               'name' => 'attach::instance'
-	//             ),
-	//             'serviceId' => TypedName(
-	//               'namespace' => 'service',
-	//               'name' => 'Yaml::Test'
-	//             ),
-	//             'properties' => {
-	//               'input' => [
-	//                 Parameter(
-	//                   'name' => 'region',
-	//                   'type' => String
-	//                 ),
-	//                 Parameter(
-	//                   'name' => 'i',
-	//                   'type' => Optional[String]
-	//                 ),
-	//                 Parameter(
-	//                   'name' => 'keyName',
-	//                   'type' => String
-	//                 ),
-	//                 Parameter(
-	//                   'name' => 'tags',
-	//                   'type' => Hash[String, String]
-	//                 )],
-	//               'output' => [
-	//                 Parameter(
-	//                   'name' => 'key',
-	//                   'type' => Optional[String],
-	//                   'value' => 'instanceId'
-	//                 ),
-	//                 Parameter(
-	//                   'name' => 'value',
-	//                   'type' => Tuple[Optional[String], Optional[String]],
-	//                   'value' => ['publicIp', 'privateIp']
-	//                 )],
-	//               'resourceType' => Lyra::Aws::Instance,
-	//               'style' => 'resource'
-	//             }
+	//       'properties' => {
+	//         'input' => [
+	//           Parameter(
+	//             'name' => 'region',
+	//             'type' => String
 	//           ),
-	//           'style' => 'iterator'
-	//         }
-	//       ),
-	//       Service::Definition(
-	//         'identifier' => TypedName(
-	//           'namespace' => 'definition',
-	//           'name' => 'attach::gw'
-	//         ),
-	//         'serviceId' => TypedName(
-	//           'namespace' => 'service',
-	//           'name' => 'Yaml::Test'
-	//         ),
-	//         'properties' => {
-	//           'input' => [
-	//             Parameter(
-	//               'name' => 'region',
-	//               'type' => String
-	//             ),
-	//             Parameter(
-	//               'name' => 'tags',
-	//               'type' => Hash[String, String]
-	//             )],
-	//           'output' => [
-	//             Parameter(
-	//               'name' => 'internetGatewayId',
-	//               'type' => Optional[String]
-	//             )],
-	//           'resourceType' => Lyra::Aws::InternetGateway,
-	//           'style' => 'resource'
-	//         }
-	//       )],
-	//     'style' => 'workflow'
+	//           Parameter(
+	//             'name' => 'i',
+	//             'type' => Optional[String]
+	//           ),
+	//           Parameter(
+	//             'name' => 'keyName',
+	//             'type' => String
+	//           ),
+	//           Parameter(
+	//             'name' => 'tags',
+	//             'type' => Optional[Hash[String, String]]
+	//           )],
+	//         'output' => [
+	//           Parameter(
+	//             'name' => 'key',
+	//             'type' => Optional[String],
+	//             'value' => 'instanceId'
+	//           ),
+	//           Parameter(
+	//             'name' => 'value',
+	//             'type' => Tuple[Optional[String], Optional[String]],
+	//             'value' => ['publicIp', 'privateIp']
+	//           )],
+	//         'resourceType' => Lyra::Aws::Instance,
+	//         'style' => 'resource'
+	//       }
+	//     ),
+	//     'style' => 'iterator'
 	//   }
 	// )
-	// Lyra::Aws::Vpc(
-	//   'ensure' => 'present',
+	// Lyra::Aws::InternetGateway(
 	//   'region' => 'us-west',
-	//   'tags' => {
-	//     'a' => 'av',
-	//     'b' => 'bv'
-	//   },
-	//   'cidrBlock' => '192.168.0.0/16',
-	//   'enableDnsHostnames' => true,
-	//   'enableDnsSupport' => true
+	//   'nestedInfo' => {
+	//     'tags' => {
+	//       'a' => 'av',
+	//       'b' => 'bv'
+	//     }
+	//   }
 	// )
 }

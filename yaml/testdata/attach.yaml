@@ -22,7 +22,6 @@
      vpc:
        output: vpcId
        state:
-         ensure              : present
          region              : $region
          cidrBlock           : 192.168.0.0/16
          tags                : $tags
@@ -31,7 +30,6 @@
      subnet:
        output: subnetId
        state:
-         ensure                 : present
          region                 : $region
          vpcId                  : $vpcId
          cidrBlock              : 192.168.1.0/24
@@ -48,7 +46,6 @@
          vars:     i
        state:
          region      : $region
-         ensure      : present
          instanceId  : $i
          imageId     : ami-f90a4880
          instanceType: t2.nano
@@ -58,6 +55,6 @@
        type: Lyra::Aws::InternetGateway
        output: internetGatewayId
        state:
-         ensure: present
          region: $region
-         tags  : $tags
+         nestedInfo:
+           tags: $tags

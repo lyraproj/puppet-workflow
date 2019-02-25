@@ -365,26 +365,7 @@ func (a *activity) getState(c eval.Context, input []eval.Parameter) (eval.Ordere
 				s := sv.String()
 				if varNamePattern.MatchString(s) {
 					at := a.attributeType(c, s)
-					if vs, ok := v.(eval.StringValue); ok {
-						s := vs.String()
-						if len(s) > 1 && s[0] == '$' {
-							vn := s[1:]
-							if varNamePattern.MatchString(vn) {
-								// Add to input unless it's there already
-								found := false
-								for _, ip := range input {
-									if ip.Name() == vn {
-										found = true
-										break
-									}
-								}
-								if !found {
-									input = append(input, impl.NewParameter(vn, at, nil, false))
-								}
-								v = types.NewDeferred(s)
-							}
-						}
-					}
+					v, input = a.resolveInputs(v, at, input)
 					es = append(es, types.WrapHashEntry(k, v))
 					return true
 				}
@@ -395,6 +376,95 @@ func (a *activity) getState(c eval.Context, input []eval.Parameter) (eval.Ordere
 		}
 	}
 	panic(eval.Error(WF_FIELD_TYPE_MISMATCH, issue.H{`activity`: a, `field`: `definition`, `expected`: `Hash`, `actual`: de}))
+}
+
+func stripOptional(t eval.Type) eval.Type {
+	if ot, ok := t.(*types.OptionalType); ok {
+		return stripOptional(ot.ContainedType())
+	}
+	return t
+}
+
+func (a *activity) resolveInputs(v eval.Value, at eval.Type, input []eval.Parameter) (eval.Value, []eval.Parameter) {
+	switch v.(type) {
+	case eval.StringValue:
+		s := v.String()
+		if len(s) > 1 && s[0] == '$' {
+			vn := s[1:]
+			if varNamePattern.MatchString(vn) {
+				// Add to input unless it's there already
+				found := false
+				for i, ip := range input {
+					if ip.Name() == vn {
+						if ip.Type() == types.DefaultAnyType() {
+							// Replace untyped with typed
+							input[i] = impl.NewParameter(vn, at, nil, false)
+						}
+						found = true
+						break
+					}
+				}
+				if !found {
+					input = append(input, impl.NewParameter(vn, at, nil, false))
+				}
+				v = types.NewDeferred(s)
+			}
+		}
+	case eval.OrderedMap:
+		mv := v.(eval.OrderedMap)
+		es := make([]*types.HashEntry, 0, mv.Len())
+		nta := stripOptional(at)
+		if ot, ok := nta.(eval.TypeWithCallableMembers); ok {
+			mv.EachPair(func(k, av eval.Value) {
+				if m, ok := ot.Member(k.String()); ok {
+					av, input = a.resolveInputs(av, m.(eval.AnnotatedMember).Type(), input)
+				} else {
+					av, input = a.resolveInputs(av, types.DefaultAnyType(), input)
+				}
+				es = append(es, types.WrapHashEntry(k, av))
+			})
+		} else if ht, ok := nta.(*types.HashType); ok {
+			et := ht.ValueType()
+			mv.EachPair(func(k, av eval.Value) {
+				av, input = a.resolveInputs(av, et, input)
+				es = append(es, types.WrapHashEntry(k, av))
+			})
+		} else if st, ok := nta.(*types.StructType); ok {
+			hm := st.HashedMembers()
+			mv.EachPair(func(k, av eval.Value) {
+				if m, ok := hm[k.String()]; ok {
+					av, input = a.resolveInputs(av, m.Value(), input)
+				} else {
+					av, input = a.resolveInputs(av, types.DefaultAnyType(), input)
+				}
+				es = append(es, types.WrapHashEntry(k, av))
+			})
+		}
+		v = types.WrapHash(es)
+	case eval.List:
+		lv := v.(eval.List)
+		es := make([]eval.Value, lv.Len())
+		nta := stripOptional(at)
+		if st, ok := nta.(*types.ArrayType); ok {
+			et := st.ElementType()
+			lv.EachWithIndex(func(ev eval.Value, i int) {
+				ev, input = a.resolveInputs(ev, et, input)
+				es[i] = ev
+			})
+		} else if tt, ok := nta.(*types.TupleType); ok {
+			ts := tt.Types()
+			lv.EachWithIndex(func(ev eval.Value, i int) {
+				if i < len(ts) {
+					ev, input = a.resolveInputs(ev, ts[i], input)
+				} else {
+					ev, input = a.resolveInputs(ev, types.DefaultAnyType(), input)
+				}
+				es[i] = ev
+			})
+		}
+		v = types.WrapValues(es)
+	}
+	return v, input
 }
 
 func (a *activity) getResourceType(c eval.Context) eval.ObjectType {

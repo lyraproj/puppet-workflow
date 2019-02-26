@@ -61,41 +61,44 @@ func Start(serviceName string) {
 	})
 }
 
-func (m *manifestLoader) LoadManifest(fileName string) serviceapi.Definition {
-	c := m.ctx // TODO: Concurrency issue here. Need common loader for all threads, but not common context
-	content, err := ioutil.ReadFile(fileName)
-	if err != nil {
-		panic(eval.Error(eval.EVAL_UNABLE_TO_READ_FILE, issue.H{`path`: fileName, `detail`: err.Error()}))
-	}
+func (m *manifestLoader) LoadManifest(moduleDir string, fileName string) (ms serviceapi.Definition) {
+	eval.Puppet.DoWithParent(m.ctx, func(c eval.Context) {
+		c.SetLoader(eval.NewFilebasedLoader(c.Loader(), moduleDir, ``, eval.PUPPET_DATA_TYPE_PATH))
+		content, err := ioutil.ReadFile(fileName)
+		if err != nil {
+			panic(eval.Error(eval.EVAL_UNABLE_TO_READ_FILE, issue.H{`path`: fileName, `detail`: err.Error()}))
+		}
 
-	mf := munged(fileName)
-	sb := service.NewServerBuilder(c, mf)
-	c.Set(functions.ServerBuilderKey, sb)
+		mf := munged(fileName)
+		sb := service.NewServerBuilder(c, mf)
+		c.Set(functions.ServerBuilderKey, sb)
 
-	if strings.HasSuffix(fileName, `.yaml`) {
-		// Assume YAML content instead of Puppet DSL
-		sb.RegisterStateConverter(yaml.ResolveState)
-		sb.RegisterActivity(yaml.CreateActivity(c, fileName, content))
-	} else {
-		ast := c.ParseAndValidate(fileName, string(content), false)
-		c.AddDefinitions(ast)
+		if strings.HasSuffix(fileName, `.yaml`) {
+			// Assume YAML content instead of Puppet DSL
+			sb.RegisterStateConverter(yaml.ResolveState)
+			sb.RegisterActivity(yaml.CreateActivity(c, fileName, content))
+		} else {
+			ast := c.ParseAndValidate(fileName, string(content), false)
+			c.AddDefinitions(ast)
 
-		sb.RegisterStateConverter(ResolveState)
-		for _, def := range c.ResolveDefinitions() {
-			switch def.(type) {
-			case PuppetActivity:
-				sb.RegisterActivity(def.(PuppetActivity).Activity())
-			case eval.Type:
-				sb.RegisterType(def.(eval.Type))
+			sb.RegisterStateConverter(ResolveState)
+			for _, def := range c.ResolveDefinitions() {
+				switch def.(type) {
+				case PuppetActivity:
+					sb.RegisterActivity(def.(PuppetActivity).Activity())
+				case eval.Type:
+					sb.RegisterType(def.(eval.Type))
+				}
+			}
+			_, e := eval.TopEvaluate(c, ast)
+			if e != nil {
+				panic(e)
 			}
 		}
-		_, e := eval.TopEvaluate(c, ast)
-		if e != nil {
-			panic(e)
-		}
-	}
-	s, _ := m.ctx.Get(`Puppet::ServiceLoader`)
-	return s.(*service.Server).AddApi(mf, &manifestService{c, sb.Server()})
+		s, _ := m.ctx.Get(`Puppet::ServiceLoader`)
+		ms = s.(*service.Server).AddApi(mf, &manifestService{c, sb.Server()})
+	})
+	return
 }
 
 func munged(path string) string {

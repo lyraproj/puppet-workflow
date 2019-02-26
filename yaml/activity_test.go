@@ -15,7 +15,7 @@ import (
 
 func ExampleNestedObject() {
 	eval.Puppet.Do(func(ctx eval.Context) {
-		typesFile := "testdata/tf-k8s.pp"
+		typesFile := "../puppet/testdata/types/TerraformKubernetes.pp"
 		content, err := ioutil.ReadFile(typesFile)
 		if err != nil {
 			panic(err.Error())
@@ -62,7 +62,7 @@ func ExampleNestedObject() {
 
 func ExampleActivity() {
 	eval.Puppet.Do(func(ctx eval.Context) {
-		typesFile := "testdata/types.pp"
+		typesFile := "../puppet/testdata/types/Aws.pp"
 		content, err := ioutil.ReadFile(typesFile)
 		if err != nil {
 			panic(err.Error())
@@ -74,7 +74,7 @@ func ExampleActivity() {
 			panic(err.Error())
 		}
 
-		workflowFile := "testdata/attach.yaml"
+		workflowFile := "testdata/aws_vpc.yaml"
 		content, err = ioutil.ReadFile(workflowFile)
 		if err != nil {
 			panic(err.Error())
@@ -88,15 +88,10 @@ func ExampleActivity() {
 		_, defs := sv.Metadata(ctx)
 
 		wf := defs[0]
-		if av, ok := wf.Properties().Get4(`activities`); ok {
-			if al, ok := av.(eval.List); ok {
-				al.At(2).ToString(os.Stdout, eval.PRETTY, nil)
-				fmt.Println()
-			}
-		}
+		wf.ToString(os.Stdout, eval.PRETTY, nil)
+		fmt.Println()
 
-		st := sv.State(ctx, `attach::gw`, eval.Wrap(ctx, map[string]interface{}{
-			`region`: `us-west`,
+		st := sv.State(ctx, `aws_vpc::vpc`, eval.Wrap(ctx, map[string]interface{}{
 			`tags`:   map[string]string{`a`: `av`, `b`: `bv`}}).(eval.OrderedMap))
 		st.ToString(os.Stdout, eval.PRETTY, nil)
 		fmt.Println()
@@ -106,76 +101,97 @@ func ExampleActivity() {
 	// Service::Definition(
 	//   'identifier' => TypedName(
 	//     'namespace' => 'definition',
-	//     'name' => 'attach::nodes'
+	//     'name' => 'aws_vpc'
 	//   ),
 	//   'serviceId' => TypedName(
 	//     'namespace' => 'service',
 	//     'name' => 'Yaml::Test'
 	//   ),
 	//   'properties' => {
-	//     'iterationStyle' => 'times',
-	//     'over' => [
+	//     'input' => [
 	//       Parameter(
-	//         'name' => 'ec2Cnt',
-	//         'type' => Any
+	//         'name' => 'tags',
+	//         'type' => Hash[String, String],
+	//         'value' => Deferred(
+	//           'name' => 'lookup',
+	//           'arguments' => ['aws.tags']
+	//         )
 	//       )],
-	//     'variables' => [
+	//     'output' => [
 	//       Parameter(
-	//         'name' => 'i',
-	//         'type' => Any
+	//         'name' => 'vpcId',
+	//         'type' => String
+	//       ),
+	//       Parameter(
+	//         'name' => 'subnetId',
+	//         'type' => String
 	//       )],
-	//     'producer' => Service::Definition(
-	//       'identifier' => TypedName(
-	//         'namespace' => 'definition',
-	//         'name' => 'attach::instance'
+	//     'activities' => [
+	//       Service::Definition(
+	//         'identifier' => TypedName(
+	//           'namespace' => 'definition',
+	//           'name' => 'aws_vpc::vpc'
+	//         ),
+	//         'serviceId' => TypedName(
+	//           'namespace' => 'service',
+	//           'name' => 'Yaml::Test'
+	//         ),
+	//         'properties' => {
+	//           'input' => [
+	//             Parameter(
+	//               'name' => 'tags',
+	//               'type' => Hash[String, String]
+	//             )],
+	//           'output' => [
+	//             Parameter(
+	//               'name' => 'vpcId',
+	//               'type' => Optional[String]
+	//             )],
+	//           'resourceType' => Aws::Vpc,
+	//           'style' => 'resource'
+	//         }
 	//       ),
-	//       'serviceId' => TypedName(
-	//         'namespace' => 'service',
-	//         'name' => 'Yaml::Test'
-	//       ),
-	//       'properties' => {
-	//         'input' => [
-	//           Parameter(
-	//             'name' => 'region',
-	//             'type' => String
-	//           ),
-	//           Parameter(
-	//             'name' => 'i',
-	//             'type' => Optional[String]
-	//           ),
-	//           Parameter(
-	//             'name' => 'keyName',
-	//             'type' => String
-	//           ),
-	//           Parameter(
-	//             'name' => 'tags',
-	//             'type' => Optional[Hash[String, String]]
-	//           )],
-	//         'output' => [
-	//           Parameter(
-	//             'name' => 'key',
-	//             'type' => Optional[String],
-	//             'value' => 'instanceId'
-	//           ),
-	//           Parameter(
-	//             'name' => 'value',
-	//             'type' => Tuple[Optional[String], Optional[String]],
-	//             'value' => ['publicIp', 'privateIp']
-	//           )],
-	//         'resourceType' => Lyra::Aws::Instance,
-	//         'style' => 'resource'
-	//       }
-	//     ),
-	//     'style' => 'iterator'
+	//       Service::Definition(
+	//         'identifier' => TypedName(
+	//           'namespace' => 'definition',
+	//           'name' => 'aws_vpc::subnet'
+	//         ),
+	//         'serviceId' => TypedName(
+	//           'namespace' => 'service',
+	//           'name' => 'Yaml::Test'
+	//         ),
+	//         'properties' => {
+	//           'input' => [
+	//             Parameter(
+	//               'name' => 'vpcId',
+	//               'type' => String
+	//             ),
+	//             Parameter(
+	//               'name' => 'tags',
+	//               'type' => Hash[String, String]
+	//             )],
+	//           'output' => [
+	//             Parameter(
+	//               'name' => 'subnetId',
+	//               'type' => Optional[String]
+	//             )],
+	//           'resourceType' => Aws::Subnet,
+	//           'style' => 'resource'
+	//         }
+	//       )],
+	//     'style' => 'workflow'
 	//   }
 	// )
-	// Lyra::Aws::InternetGateway(
-	//   'region' => 'us-west',
-	//   'nestedInfo' => {
-	//     'tags' => {
-	//       'a' => 'av',
-	//       'b' => 'bv'
-	//     }
-	//   }
+	// Aws::Vpc(
+	//   'amazonProvidedIpv6CidrBlock' => false,
+	//   'cidrBlock' => '192.168.0.0/16',
+	//   'enableDnsHostnames' => false,
+	//   'enableDnsSupport' => false,
+	//   'tags' => {
+	//     'a' => 'av',
+	//     'b' => 'bv'
+	//   },
+	//   'isDefault' => false,
+	//   'state' => 'available'
 	// )
 }

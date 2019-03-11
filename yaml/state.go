@@ -1,18 +1,18 @@
 package yaml
 
 import (
-	"github.com/lyraproj/puppet-evaluator/eval"
-	"github.com/lyraproj/puppet-evaluator/types"
+	"github.com/lyraproj/pcore/px"
+	"github.com/lyraproj/pcore/types"
 	"github.com/lyraproj/servicesdk/wfapi"
 )
 
 type state struct {
-	ctx             eval.Context
-	stateType       eval.ObjectType
-	unresolvedState eval.OrderedMap
+	ctx             px.Context
+	stateType       px.ObjectType
+	unresolvedState px.OrderedMap
 }
 
-func (r *state) Type() eval.ObjectType {
+func (r *state) Type() px.ObjectType {
 	return r.stateType
 }
 
@@ -20,20 +20,14 @@ func (r *state) State() interface{} {
 	return r.unresolvedState
 }
 
-func ResolveState(ctx eval.Context, state wfapi.State, input eval.OrderedMap) eval.PuppetObject {
-	return ctx.Scope().WithLocalScope(func() (v eval.Value) {
-		scope := ctx.Scope()
-		input.EachPair(func(k, v eval.Value) {
-			scope.Set(k.String(), v)
-		})
-		resolvedState := types.ResolveDeferred(ctx, state.State().(eval.OrderedMap)).(eval.OrderedMap)
-		resolvedState = convertState(ctx, state.Type(), resolvedState)
-		return eval.New(ctx, state.Type(), resolvedState).(eval.PuppetObject)
-	}).(eval.PuppetObject)
+func ResolveState(ctx px.Context, state wfapi.State, input px.OrderedMap) px.PuppetObject {
+	resolvedState := types.ResolveDeferred(ctx, state.State().(px.OrderedMap), input).(px.OrderedMap)
+	resolvedState = convertState(ctx, state.Type(), resolvedState)
+	return px.New(ctx, state.Type(), resolvedState).(px.PuppetObject)
 }
 
 // convertState coerces each state property into the type given by its corresponding attribute
-func convertState(c eval.Context, t eval.ObjectType, st eval.OrderedMap) eval.OrderedMap {
+func convertState(c px.Context, t px.ObjectType, st px.OrderedMap) px.OrderedMap {
 	el := make([]*types.HashEntry, 0, st.Len())
 	for _, a := range t.AttributesInfo().Attributes() {
 		if v, ok := st.Get4(a.Name()); ok {
@@ -51,7 +45,7 @@ func convertState(c eval.Context, t eval.ObjectType, st eval.OrderedMap) eval.Or
 	return st
 }
 
-func coerceTo(c eval.Context, a eval.Attribute, t eval.Type, o eval.Value) eval.Value {
+func coerceTo(c px.Context, a px.Attribute, t px.Type, o px.Value) (v px.Value) {
 	if t.IsInstance(o, nil) {
 		return o
 	}
@@ -60,55 +54,51 @@ func coerceTo(c eval.Context, a eval.Attribute, t eval.Type, o eval.Value) eval.
 		t = opt.ContainedType()
 	}
 
-	switch t.(type) {
+	switch t := t.(type) {
 	case *types.ArrayType:
-		et := t.(*types.ArrayType).ElementType()
-		if oa, ok := o.(*types.ArrayValue); ok {
-			o = oa.Map(func(e eval.Value) eval.Value { return coerceTo(c, a, et, e) })
+		et := t.ElementType()
+		if oa, ok := o.(*types.Array); ok {
+			o = oa.Map(func(e px.Value) px.Value { return coerceTo(c, a, et, e) })
 		} else {
-			o = types.WrapValues([]eval.Value{coerceTo(c, a, et, o)})
+			o = types.WrapValues([]px.Value{coerceTo(c, a, et, o)})
 		}
-		o = eval.AssertInstance(a.Label(), t, o)
+		v = px.AssertInstance(a.Label(), t, o)
 	case *types.HashType:
-		ht := t.(*types.HashType)
-		kt := ht.KeyType()
-		vt := ht.ValueType()
-		if oh, ok := o.(*types.HashValue); ok {
-			o = oh.MapEntries(func(e eval.MapEntry) eval.MapEntry {
+		kt := t.KeyType()
+		vt := t.ValueType()
+		if oh, ok := o.(*types.Hash); ok {
+			o = oh.MapEntries(func(e px.MapEntry) px.MapEntry {
 				return types.WrapHashEntry(coerceTo(c, a, kt, e.Key()), coerceTo(c, a, vt, e.Value()))
 			})
 		}
-		o = eval.AssertInstance(a.Label(), t, o)
-	case eval.ObjectType:
-		ot := t.(eval.ObjectType)
-		ai := ot.AttributesInfo()
-		switch o.(type) {
-		case *types.ArrayValue:
-			av := o.(*types.ArrayValue)
-			el := make([]eval.Value, av.Len())
+		v = px.AssertInstance(a.Label(), t, o)
+	case px.ObjectType:
+		ai := t.AttributesInfo()
+		switch o := o.(type) {
+		case *types.Array:
+			el := make([]px.Value, o.Len())
 			for i, ca := range ai.Attributes() {
-				if i >= av.Len() {
+				if i >= o.Len() {
 					break
 				}
-				el[i] = coerceTo(c, ca, ca.Type(), av.At(i))
+				el[i] = coerceTo(c, ca, ca.Type(), o.At(i))
 			}
-			o = eval.New(c, ot, el...)
-		case *types.HashValue:
-			hv := o.(*types.HashValue)
-			el := make([]*types.HashEntry, 0, hv.Len())
+			v = px.New(c, t, el...)
+		case *types.Hash:
+			el := make([]*types.HashEntry, 0, o.Len())
 			for _, ca := range ai.Attributes() {
-				if v, ok := hv.Get4(ca.Name()); ok {
+				if v, ok := o.Get4(ca.Name()); ok {
 					el = append(el, types.WrapHashEntry2(ca.Name(), coerceTo(c, ca, ca.Type(), v)))
 				}
 			}
-			o = eval.New(c, ot, hv.Merge(types.WrapHash(el)))
+			v = px.New(c, t, o.Merge(types.WrapHash(el)))
 		default:
-			o = eval.New(c, ot, o)
+			v = px.New(c, t, o)
 		}
 	default:
 		// Create using single argument. This takes care of coercions from String to Version,
 		// Number to Timespan, etc.
-		o = eval.New(c, t, o)
+		v = px.New(c, t, o)
 	}
-	return o
+	return
 }

@@ -1,13 +1,17 @@
-package puppet
+package puppetwf
 
 import (
+	"strings"
+
+	"github.com/lyraproj/puppet-evaluator/pdsl"
+
+	"github.com/lyraproj/puppet-evaluator/evaluator"
+
 	"github.com/lyraproj/issue/issue"
-	"github.com/lyraproj/puppet-evaluator/eval"
-	"github.com/lyraproj/puppet-evaluator/impl"
-	"github.com/lyraproj/puppet-evaluator/types"
+	"github.com/lyraproj/pcore/px"
+	"github.com/lyraproj/pcore/types"
 	"github.com/lyraproj/puppet-parser/parser"
 	"github.com/lyraproj/servicesdk/wfapi"
-	"strings"
 )
 
 type PuppetActivity interface {
@@ -20,12 +24,12 @@ type puppetActivity struct {
 	name       string
 	parent     *puppetActivity
 	expression parser.Expression
-	properties eval.OrderedMap
+	properties px.OrderedMap
 	activity   wfapi.Activity
 }
 
 func init() {
-	impl.NewPuppetActivity = func(c eval.Context, expression *parser.ActivityExpression) eval.Resolvable {
+	evaluator.NewPuppetActivity = func(c pdsl.EvaluationContext, expression *parser.ActivityExpression) evaluator.Resolvable {
 		return newActivity(c, nil, expression)
 	}
 }
@@ -38,7 +42,7 @@ func (a *puppetActivity) Name() string {
 	return a.name
 }
 
-func (a *puppetActivity) Resolve(c eval.Context) {
+func (a *puppetActivity) Resolve(c px.Context) {
 	if a.activity == nil {
 		switch a.Style() {
 		case `stateHandler`:
@@ -57,20 +61,20 @@ func (a *puppetActivity) buildActivity(builder wfapi.Builder) {
 	builder.Name(a.Name())
 	builder.When(a.getWhen())
 	builder.Input(a.extractParameters(a.properties, `input`, a.inferInput)...)
-	builder.Output(a.extractParameters(a.properties, `output`, func() []eval.Parameter { return eval.NoParameters })...)
+	builder.Output(a.extractParameters(a.properties, `output`, func() []px.Parameter { return []px.Parameter{} })...)
 }
 
-func newActivity(c eval.Context, parent *puppetActivity, ex *parser.ActivityExpression) *puppetActivity {
+func newActivity(c pdsl.EvaluationContext, parent *puppetActivity, ex *parser.ActivityExpression) *puppetActivity {
 	ca := &puppetActivity{parent: parent, expression: ex}
 	if props := ex.Properties(); props != nil {
-		v := eval.Evaluate(c, props)
-		dh, ok := v.(*types.HashValue)
+		v := pdsl.Evaluate(c, props)
+		dh, ok := v.(*types.Hash)
 		if !ok {
-			panic(eval.Error(WF_FIELD_TYPE_MISMATCH, issue.H{`field`: `properties`, `expected`: `Hash`, `actual`: v.PType()}))
+			panic(px.Error(FieldTypeMismatch, issue.H{`field`: `properties`, `expected`: `Hash`, `actual`: v.PType()}))
 		}
 		ca.properties = dh
 	} else {
-		ca.properties = eval.EMPTY_MAP
+		ca.properties = px.EmptyMap
 	}
 	sgs := strings.Split(ex.Name(), `::`)
 	ca.name = sgs[len(sgs)-1]
@@ -84,7 +88,7 @@ func (a *puppetActivity) buildStateHandler(builder wfapi.StateHandlerBuilder) {
 
 func (a *puppetActivity) buildResource(builder wfapi.ResourceBuilder) {
 	a.buildActivity(builder)
-	c := builder.Context()
+	c := builder.Context().(pdsl.EvaluationContext)
 	builder.State(&state{ctx: c, stateType: a.getResourceType(c), unresolvedState: a.getState(c)})
 	if extId, ok := a.getStringProperty(`externalId`); ok {
 		builder.ExternalId(extId)
@@ -93,7 +97,7 @@ func (a *puppetActivity) buildResource(builder wfapi.ResourceBuilder) {
 
 func (a *puppetActivity) buildAction(builder wfapi.ActionBuilder) {
 	if fd, ok := a.expression.(*parser.FunctionDefinition); ok {
-		fn := impl.NewPuppetFunction(fd)
+		fn := evaluator.NewPuppetFunction(fd)
 		fn.Resolve(builder.Context())
 		builder.Name(fn.Name())
 		builder.Input(fn.Parameters()...)
@@ -103,9 +107,9 @@ func (a *puppetActivity) buildAction(builder wfapi.ActionBuilder) {
 		if rt != nil {
 			if st, ok := rt.(*types.StructType); ok {
 				es := st.Elements()
-				ps := make([]eval.Parameter, len(es))
+				ps := make([]px.Parameter, len(es))
 				for i, e := range es {
-					ps[i] = impl.NewParameter(e.Name(), e.Value(), nil, false)
+					ps[i] = px.NewParameter(e.Name(), e.Value(), nil, false)
 				}
 				builder.Output(ps...)
 			}
@@ -127,7 +131,7 @@ func (a *puppetActivity) buildWorkflow(builder wfapi.WorkflowBuilder) {
 
 	block, ok := de.(*parser.BlockExpression)
 	if !ok {
-		panic(eval.Error(WF_FIELD_TYPE_MISMATCH, issue.H{`field`: `definition`, `expected`: `CodeBlock`, `actual`: de}))
+		panic(px.Error(FieldTypeMismatch, issue.H{`field`: `definition`, `expected`: `CodeBlock`, `actual`: de}))
 	}
 
 	// Block should only contain activity expressions or something is wrong.
@@ -138,13 +142,13 @@ func (a *puppetActivity) buildWorkflow(builder wfapi.WorkflowBuilder) {
 			ac := &puppetActivity{parent: a, expression: fn}
 			builder.Action(ac.buildAction)
 		} else {
-			panic(eval.Error(WF_NOT_ACTIVITY, issue.H{`actual`: stmt}))
+			panic(px.Error(NotActivity, issue.H{`actual`: stmt}))
 		}
 	}
 }
 
 func (a *puppetActivity) workflowActivity(builder wfapi.WorkflowBuilder, as *parser.ActivityExpression) {
-	ac := newActivity(builder.Context(), a, as)
+	ac := newActivity(builder.Context().(pdsl.EvaluationContext), a, as)
 	if _, ok := ac.properties.Get4(`iteration`); ok {
 		builder.Iterator(ac.buildIterator)
 	} else {
@@ -168,31 +172,31 @@ func (a *puppetActivity) Style() string {
 	return string(a.expression.(*parser.ActivityExpression).Style())
 }
 
-func (a *puppetActivity) inferInput() []eval.Parameter {
+func (a *puppetActivity) inferInput() []px.Parameter {
 	// TODO:
-	return eval.NoParameters
+	return []px.Parameter{}
 }
 
-func (a *puppetActivity) inferOutput() []eval.Parameter {
+func (a *puppetActivity) inferOutput() []px.Parameter {
 	// TODO:
-	return eval.NoParameters
+	return []px.Parameter{}
 }
 
-func noParamsFunc() []eval.Parameter {
-	return eval.NoParameters
+func noParamsFunc() []px.Parameter {
+	return []px.Parameter{}
 }
 
 func (a *puppetActivity) buildIterator(builder wfapi.IteratorBuilder) {
 	v, _ := a.properties.Get4(`iteration`)
-	iteratorDef, ok := v.(*types.HashValue)
+	iteratorDef, ok := v.(*types.Hash)
 	if !ok {
-		panic(eval.Error(WF_FIELD_TYPE_MISMATCH, issue.H{`field`: `iteration`, `expected`: `Hash`, `actual`: v.PType()}))
+		panic(px.Error(FieldTypeMismatch, issue.H{`field`: `iteration`, `expected`: `Hash`, `actual`: v.PType()}))
 	}
 
-	v = iteratorDef.Get5(`function`, eval.UNDEF)
-	style, ok := v.(eval.StringValue)
+	v = iteratorDef.Get5(`function`, px.Undef)
+	style, ok := v.(px.StringValue)
 	if !ok {
-		panic(eval.Error(WF_FIELD_TYPE_MISMATCH, issue.H{`field`: `iteration.style`, `expected`: `String`, `actual`: v}))
+		panic(px.Error(FieldTypeMismatch, issue.H{`field`: `iteration.style`, `expected`: `String`, `actual`: v}))
 	}
 	if name, ok := iteratorDef.Get4(`name`); ok {
 		builder.Name(name.String())
@@ -213,7 +217,7 @@ func (a *puppetActivity) buildIterator(builder wfapi.IteratorBuilder) {
 	}
 }
 
-func (a *puppetActivity) getAPI(c eval.Context, input []eval.Parameter) eval.PuppetObject {
+func (a *puppetActivity) getAPI(c px.Context, input []px.Parameter) px.PuppetObject {
 	var de parser.Expression
 	if ae, ok := a.expression.(*parser.ActivityExpression); ok {
 		de = ae.Definition()
@@ -222,16 +226,16 @@ func (a *puppetActivity) getAPI(c eval.Context, input []eval.Parameter) eval.Pup
 		return NewDo(a.Name(), input, a.expression)
 	}
 	if de == nil {
-		panic(c.Error(a.expression, WF_NO_DEFINITION, issue.NO_ARGS))
+		panic(c.Error(a.expression, NoDefinition, issue.NO_ARGS))
 	}
 
 	block, ok := de.(*parser.BlockExpression)
 	if !ok {
-		panic(c.Error(de, WF_FIELD_TYPE_MISMATCH, issue.H{`field`: `definition`, `expected`: `CodeBlock`, `actual`: de}))
+		panic(c.Error(de, FieldTypeMismatch, issue.H{`field`: `definition`, `expected`: `CodeBlock`, `actual`: de}))
 	}
 
 	// Block must only consist of functions the functions create, read, update, and delete.
-	var create, read, update, remove eval.InvocableValue
+	var create, read, update, remove px.InvokableValue
 	for _, e := range block.Statements() {
 		if fd, ok := e.(*parser.FunctionDefinition); ok {
 			switch fd.Name() {
@@ -248,10 +252,10 @@ func (a *puppetActivity) getAPI(c eval.Context, input []eval.Parameter) eval.Pup
 				remove = createFunction(c, fd)
 				continue
 			default:
-				panic(c.Error(e, WF_INVALID_FUNCTION, issue.H{`name`: fd.Name()}))
+				panic(c.Error(e, InvalidFunction, issue.H{`name`: fd.Name()}))
 			}
 		}
-		panic(c.Error(e, WF_FIELD_TYPE_MISMATCH, issue.H{`field`: `definition`, `expected`: `function`, `actual`: e}))
+		panic(c.Error(e, FieldTypeMismatch, issue.H{`field`: `definition`, `expected`: `function`, `actual`: e}))
 	}
 
 	missing := ``
@@ -263,7 +267,7 @@ func (a *puppetActivity) getAPI(c eval.Context, input []eval.Parameter) eval.Pup
 		missing = `delete`
 	}
 	if missing != `` {
-		panic(c.Error(block, WF_MISSING_REQUIRED_FUNCTION, issue.H{`function`: missing}))
+		panic(c.Error(block, MissingRequiredFunction, issue.H{`function`: missing}))
 	}
 	if update == nil {
 		return NewCRD(a.Name(), create, read, remove)
@@ -271,8 +275,8 @@ func (a *puppetActivity) getAPI(c eval.Context, input []eval.Parameter) eval.Pup
 	return NewCRUD(a.Name(), create, read, update, remove)
 }
 
-func createFunction(c eval.Context, fd *parser.FunctionDefinition) impl.PuppetFunction {
-	f := impl.NewPuppetFunction(fd)
+func createFunction(c px.Context, fd *parser.FunctionDefinition) evaluator.PuppetFunction {
+	f := evaluator.NewPuppetFunction(fd)
 	f.Resolve(c)
 	return f
 }
@@ -284,7 +288,7 @@ func (a *puppetActivity) getWhen() string {
 	return ``
 }
 
-func (a *puppetActivity) extractParameters(props eval.OrderedMap, field string, dflt func() []eval.Parameter) []eval.Parameter {
+func (a *puppetActivity) extractParameters(props px.OrderedMap, field string, dflt func() []px.Parameter) []px.Parameter {
 	if props == nil {
 		return dflt()
 	}
@@ -294,50 +298,50 @@ func (a *puppetActivity) extractParameters(props eval.OrderedMap, field string, 
 		return dflt()
 	}
 
-	ia, ok := v.(*types.ArrayValue)
+	ia, ok := v.(*types.Array)
 	if !ok {
-		panic(eval.Error(WF_FIELD_TYPE_MISMATCH, issue.H{`field`: field, `expected`: `Array`, `actual`: v.PType()}))
+		panic(px.Error(FieldTypeMismatch, issue.H{`field`: field, `expected`: `Array`, `actual`: v.PType()}))
 	}
 
-	params := make([]eval.Parameter, ia.Len())
-	ia.EachWithIndex(func(v eval.Value, i int) {
-		if p, ok := v.(eval.Parameter); ok {
+	params := make([]px.Parameter, ia.Len())
+	ia.EachWithIndex(func(v px.Value, i int) {
+		if p, ok := v.(px.Parameter); ok {
 			params[i] = p
 		} else {
-			panic(eval.Error(WF_ELEMENT_NOT_PARAMETER, issue.H{`type`: p.PType(), `field`: field}))
+			panic(px.Error(ElementNotParameter, issue.H{`type`: p.PType(), `field`: field}))
 		}
 	})
 	return params
 }
 
-func (a *puppetActivity) getState(c eval.Context) eval.OrderedMap {
+func (a *puppetActivity) getState(c pdsl.EvaluationContext) px.OrderedMap {
 	ae, ok := a.expression.(*parser.ActivityExpression)
 	if !ok {
-		return eval.EMPTY_MAP
+		return px.EmptyMap
 	}
 	de := ae.Definition()
 	if de == nil {
-		return eval.EMPTY_MAP
+		return px.EmptyMap
 	}
 
 	if hash, ok := de.(*parser.LiteralHash); ok {
 		// Transform all variable references to Deferred expressions
-		return eval.Evaluate(c, hash).(eval.OrderedMap)
+		return pdsl.Evaluate(c, hash).(px.OrderedMap)
 	}
-	panic(eval.Error(WF_FIELD_TYPE_MISMATCH, issue.H{`field`: `definition`, `expected`: `Hash`, `actual`: de}))
+	panic(px.Error(FieldTypeMismatch, issue.H{`field`: `definition`, `expected`: `Hash`, `actual`: de}))
 }
 
-func (a *puppetActivity) getResourceType(c eval.Context) eval.ObjectType {
+func (a *puppetActivity) getResourceType(c px.Context) px.ObjectType {
 	n := a.Name()
 	if a.properties != nil {
 		if tv, ok := a.properties.Get4(`type`); ok {
-			if t, ok := tv.(eval.ObjectType); ok {
+			if t, ok := tv.(px.ObjectType); ok {
 				return t
 			}
-			if s, ok := tv.(eval.StringValue); ok {
+			if s, ok := tv.(px.StringValue); ok {
 				n = s.String()
 			} else {
-				panic(eval.Error(WF_FIELD_TYPE_MISMATCH, issue.H{`field`: `definition`, `expected`: `Variant[String,ObjectType]`, `actual`: tv}))
+				panic(px.Error(FieldTypeMismatch, issue.H{`field`: `definition`, `expected`: `Variant[String,ObjectType]`, `actual`: tv}))
 			}
 		} else {
 			ts := a.getTypeSpace()
@@ -346,14 +350,14 @@ func (a *puppetActivity) getResourceType(c eval.Context) eval.ObjectType {
 			}
 		}
 	}
-	tn := eval.NewTypedName(eval.NsType, n)
-	if t, ok := eval.Load(c, tn); ok {
-		if pt, ok := t.(eval.ObjectType); ok {
+	tn := px.NewTypedName(px.NsType, n)
+	if t, ok := px.Load(c, tn); ok {
+		if pt, ok := t.(px.ObjectType); ok {
 			return pt
 		}
-		panic(eval.Error(WF_FIELD_TYPE_MISMATCH, issue.H{`field`: `definition`, `expected`: `ObjectType`, `actual`: t}))
+		panic(px.Error(FieldTypeMismatch, issue.H{`field`: `definition`, `expected`: `ObjectType`, `actual`: t}))
 	}
-	panic(eval.Error(eval.EVAL_UNRESOLVED_TYPE, issue.H{`typeString`: tn.Name()}))
+	panic(px.Error(px.UnresolvedType, issue.H{`typeString`: tn.Name()}))
 }
 
 func (a *puppetActivity) getTypeSpace() string {
@@ -376,8 +380,8 @@ func (a *puppetActivity) getStringProperty(field string) (string, bool) {
 		return ``, false
 	}
 
-	if s, ok := v.(eval.StringValue); ok {
+	if s, ok := v.(px.StringValue); ok {
 		return s.String(), true
 	}
-	panic(eval.Error(WF_FIELD_TYPE_MISMATCH, issue.H{`field`: field, `expected`: `String`, `actual`: v.PType()}))
+	panic(px.Error(FieldTypeMismatch, issue.H{`field`: field, `expected`: `String`, `actual`: v.PType()}))
 }

@@ -22,9 +22,8 @@ func (r *state) State() interface{} {
 }
 
 func ResolveState(ctx px.Context, state wfapi.State, input px.OrderedMap) px.PuppetObject {
-	ec := ctx.(pdsl.EvaluationContext)
-	return ec.Scope().WithLocalScope(func() (v px.Value) {
-		scope := ec.Scope()
+	scope := ctx.Scope().(pdsl.Scope)
+	return scope.WithLocalScope(func() (v px.Value) {
 		input.EachPair(func(k, v px.Value) {
 			scope.Set(k.String(), v)
 		})

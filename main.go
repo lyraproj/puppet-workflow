@@ -3,11 +3,8 @@ package main
 import (
 	"os"
 
-	hclog "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-hclog"
 	"github.com/lyraproj/puppet-workflow/puppetwf"
-
-	// Ensure that Pcore is initialized
-	_ "github.com/lyraproj/servicesdk/wf"
 )
 
 func main() {

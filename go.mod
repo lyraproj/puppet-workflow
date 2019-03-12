@@ -8,6 +8,6 @@ require (
 	github.com/lyraproj/pcore v0.0.0-20190312090417-c3ed62d0aa05
 	github.com/lyraproj/puppet-evaluator v0.0.0-20190312090506-b25468e276a8
 	github.com/lyraproj/puppet-parser v0.0.0-20190220160521-d5f541fd6c57
-	github.com/lyraproj/servicesdk v0.0.0-20190312090630-443051ccec7e
+	github.com/lyraproj/servicesdk v0.0.0-20190312143154-5efe578b614f
 	github.com/stretchr/testify v1.3.0
 )

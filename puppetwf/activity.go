@@ -3,19 +3,17 @@ package puppetwf
 import (
 	"strings"
 
-	"github.com/lyraproj/puppet-evaluator/pdsl"
-
-	"github.com/lyraproj/puppet-evaluator/evaluator"
-
 	"github.com/lyraproj/issue/issue"
 	"github.com/lyraproj/pcore/px"
 	"github.com/lyraproj/pcore/types"
+	"github.com/lyraproj/puppet-evaluator/evaluator"
+	"github.com/lyraproj/puppet-evaluator/pdsl"
 	"github.com/lyraproj/puppet-parser/parser"
-	"github.com/lyraproj/servicesdk/wfapi"
+	"github.com/lyraproj/servicesdk/wf"
 )
 
 type PuppetActivity interface {
-	Activity() wfapi.Activity
+	Activity() wf.Activity
 
 	Name() string
 }
@@ -25,7 +23,7 @@ type puppetActivity struct {
 	parent     *puppetActivity
 	expression parser.Expression
 	properties px.OrderedMap
-	activity   wfapi.Activity
+	activity   wf.Activity
 }
 
 func init() {
@@ -34,7 +32,7 @@ func init() {
 	}
 }
 
-func (a *puppetActivity) Activity() wfapi.Activity {
+func (a *puppetActivity) Activity() wf.Activity {
 	return a.activity
 }
 
@@ -46,18 +44,18 @@ func (a *puppetActivity) Resolve(c px.Context) {
 	if a.activity == nil {
 		switch a.Style() {
 		case `stateHandler`:
-			a.activity = wfapi.NewStateHandler(c, a.buildStateHandler)
+			a.activity = wf.NewStateHandler(c, a.buildStateHandler)
 		case `workflow`:
-			a.activity = wfapi.NewWorkflow(c, a.buildWorkflow)
+			a.activity = wf.NewWorkflow(c, a.buildWorkflow)
 		case `resource`:
-			a.activity = wfapi.NewResource(c, a.buildResource)
+			a.activity = wf.NewResource(c, a.buildResource)
 		case `action`:
-			a.activity = wfapi.NewAction(c, a.buildAction)
+			a.activity = wf.NewAction(c, a.buildAction)
 		}
 	}
 }
 
-func (a *puppetActivity) buildActivity(builder wfapi.Builder) {
+func (a *puppetActivity) buildActivity(builder wf.Builder) {
 	builder.Name(a.Name())
 	builder.When(a.getWhen())
 	builder.Input(a.extractParameters(a.properties, `input`, a.inferInput)...)
@@ -81,12 +79,12 @@ func newActivity(c pdsl.EvaluationContext, parent *puppetActivity, ex *parser.Ac
 	return ca
 }
 
-func (a *puppetActivity) buildStateHandler(builder wfapi.StateHandlerBuilder) {
+func (a *puppetActivity) buildStateHandler(builder wf.StateHandlerBuilder) {
 	a.buildActivity(builder)
 	builder.API(a.getAPI(builder.Context(), builder.GetInput()))
 }
 
-func (a *puppetActivity) buildResource(builder wfapi.ResourceBuilder) {
+func (a *puppetActivity) buildResource(builder wf.ResourceBuilder) {
 	a.buildActivity(builder)
 	c := builder.Context().(pdsl.EvaluationContext)
 	builder.State(&state{ctx: c, stateType: a.getResourceType(c), unresolvedState: a.getState(c)})
@@ -95,7 +93,7 @@ func (a *puppetActivity) buildResource(builder wfapi.ResourceBuilder) {
 	}
 }
 
-func (a *puppetActivity) buildAction(builder wfapi.ActionBuilder) {
+func (a *puppetActivity) buildAction(builder wf.ActionBuilder) {
 	if fd, ok := a.expression.(*parser.FunctionDefinition); ok {
 		fn := evaluator.NewPuppetFunction(fd)
 		fn.Resolve(builder.Context())
@@ -122,7 +120,7 @@ func (a *puppetActivity) buildAction(builder wfapi.ActionBuilder) {
 	}
 }
 
-func (a *puppetActivity) buildWorkflow(builder wfapi.WorkflowBuilder) {
+func (a *puppetActivity) buildWorkflow(builder wf.WorkflowBuilder) {
 	a.buildActivity(builder)
 	de := a.expression.(*parser.ActivityExpression).Definition()
 	if de == nil {
@@ -147,7 +145,7 @@ func (a *puppetActivity) buildWorkflow(builder wfapi.WorkflowBuilder) {
 	}
 }
 
-func (a *puppetActivity) workflowActivity(builder wfapi.WorkflowBuilder, as *parser.ActivityExpression) {
+func (a *puppetActivity) workflowActivity(builder wf.WorkflowBuilder, as *parser.ActivityExpression) {
 	ac := newActivity(builder.Context().(pdsl.EvaluationContext), a, as)
 	if _, ok := ac.properties.Get4(`iteration`); ok {
 		builder.Iterator(ac.buildIterator)
@@ -177,16 +175,11 @@ func (a *puppetActivity) inferInput() []px.Parameter {
 	return []px.Parameter{}
 }
 
-func (a *puppetActivity) inferOutput() []px.Parameter {
-	// TODO:
-	return []px.Parameter{}
-}
-
 func noParamsFunc() []px.Parameter {
 	return []px.Parameter{}
 }
 
-func (a *puppetActivity) buildIterator(builder wfapi.IteratorBuilder) {
+func (a *puppetActivity) buildIterator(builder wf.IteratorBuilder) {
 	v, _ := a.properties.Get4(`iteration`)
 	iteratorDef, ok := v.(*types.Hash)
 	if !ok {
@@ -201,7 +194,7 @@ func (a *puppetActivity) buildIterator(builder wfapi.IteratorBuilder) {
 	if name, ok := iteratorDef.Get4(`name`); ok {
 		builder.Name(name.String())
 	}
-	builder.Style(wfapi.NewIterationStyle(style.String()))
+	builder.Style(wf.NewIterationStyle(style.String()))
 	builder.Over(a.extractParameters(iteratorDef, `params`, noParamsFunc)...)
 	builder.Variables(a.extractParameters(iteratorDef, `vars`, noParamsFunc)...)
 
@@ -346,7 +339,7 @@ func (a *puppetActivity) getResourceType(c px.Context) px.ObjectType {
 		} else {
 			ts := a.getTypeSpace()
 			if ts != `` {
-				n = ts + `::` + wfapi.LeafName(n)
+				n = ts + `::` + wf.LeafName(n)
 			}
 		}
 	}

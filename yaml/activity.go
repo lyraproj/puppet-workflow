@@ -9,7 +9,7 @@ import (
 	"github.com/lyraproj/pcore/px"
 	"github.com/lyraproj/pcore/types"
 	"github.com/lyraproj/pcore/yaml"
-	"github.com/lyraproj/servicesdk/wfapi"
+	"github.com/lyraproj/servicesdk/wf"
 )
 
 type activity struct {
@@ -17,13 +17,13 @@ type activity struct {
 	parent   *activity
 	hash     px.OrderedMap
 	rt       px.ObjectType
-	activity wfapi.Activity
+	activity wf.Activity
 }
 
 const kindWorkflow = 1
 const kindResource = 2
 
-func CreateActivity(c px.Context, file string, content []byte) wfapi.Activity {
+func CreateActivity(c px.Context, file string, content []byte) wf.Activity {
 	c.StackPush(issue.NewLocation(file, 0, 0))
 	defer c.StackPop()
 
@@ -50,11 +50,11 @@ func CreateActivity(c px.Context, file string, content []byte) wfapi.Activity {
 	a := newActivity(name, nil, def)
 	switch a.activityKind() {
 	case kindWorkflow:
-		return wfapi.NewWorkflow(c, func(wb wfapi.WorkflowBuilder) {
+		return wf.NewWorkflow(c, func(wb wf.WorkflowBuilder) {
 			a.buildWorkflow(wb)
 		})
 	default:
-		return wfapi.NewResource(c, func(wb wfapi.ResourceBuilder) {
+		return wf.NewResource(c, func(wb wf.ResourceBuilder) {
 			a.buildResource(wb)
 		})
 	}
@@ -78,7 +78,7 @@ func (a *activity) activityKind() int {
 	panic(px.Error(NotActivity, issue.NO_ARGS))
 }
 
-func (a *activity) Activity() wfapi.Activity {
+func (a *activity) Activity() wf.Activity {
 	return a.activity
 }
 
@@ -90,14 +90,14 @@ func (a *activity) Label() string {
 	return a.Style() + " " + a.Name()
 }
 
-func (a *activity) buildActivity(builder wfapi.Builder) {
+func (a *activity) buildActivity(builder wf.Builder) {
 	builder.Name(a.Name())
 	builder.When(a.getWhen())
 	builder.Input(a.extractParameters(builder.Context(), a.hash, `input`, false)...)
 	builder.Output(a.extractParameters(builder.Context(), a.hash, `output`, true)...)
 }
 
-func (a *activity) buildResource(builder wfapi.ResourceBuilder) {
+func (a *activity) buildResource(builder wf.ResourceBuilder) {
 	c := builder.Context()
 
 	builder.Name(a.Name())
@@ -113,11 +113,7 @@ func (a *activity) buildResource(builder wfapi.ResourceBuilder) {
 	}
 }
 
-func (a *activity) buildAction(builder wfapi.ActionBuilder) {
-	a.buildActivity(builder)
-}
-
-func (a *activity) buildWorkflow(builder wfapi.WorkflowBuilder) {
+func (a *activity) buildWorkflow(builder wf.WorkflowBuilder) {
 	a.buildActivity(builder)
 	de, ok := a.hash.Get4(`activities`)
 	if !ok {
@@ -139,7 +135,7 @@ func (a *activity) buildWorkflow(builder wfapi.WorkflowBuilder) {
 	})
 }
 
-func (a *activity) workflowActivity(builder wfapi.WorkflowBuilder, name string, as px.OrderedMap) {
+func (a *activity) workflowActivity(builder wf.WorkflowBuilder, name string, as px.OrderedMap) {
 	ac := newActivity(name, a, as)
 	if _, ok := ac.hash.Get4(`iteration`); ok {
 		builder.Iterator(ac.buildIterator)
@@ -162,17 +158,7 @@ func (a *activity) Style() string {
 	}
 }
 
-func (a *activity) inferInput() []px.Parameter {
-	// TODO:
-	return []px.Parameter{}
-}
-
-func (a *activity) inferOutput() []px.Parameter {
-	// TODO:
-	return []px.Parameter{}
-}
-
-func (a *activity) buildIterator(builder wfapi.IteratorBuilder) {
+func (a *activity) buildIterator(builder wf.IteratorBuilder) {
 	v, _ := a.hash.Get4(`iteration`)
 	iteratorDef, ok := v.(*types.Hash)
 	if !ok {
@@ -187,7 +173,7 @@ func (a *activity) buildIterator(builder wfapi.IteratorBuilder) {
 	if name, ok := iteratorDef.Get4(`name`); ok {
 		builder.Name(name.String())
 	}
-	builder.Style(wfapi.NewIterationStyle(style.String()))
+	builder.Style(wf.NewIterationStyle(style.String()))
 	builder.Over(a.extractParameters(builder.Context(), iteratorDef, `over`, false)...)
 	builder.Variables(a.extractParameters(builder.Context(), iteratorDef, `vars`, false)...)
 
@@ -481,7 +467,7 @@ func (a *activity) getResourceType(c px.Context) px.ObjectType {
 	} else {
 		ts := a.getTypespace()
 		if ts != `` {
-			n = ts + `::` + wfapi.LeafName(n)
+			n = ts + `::` + wf.LeafName(n)
 		}
 	}
 

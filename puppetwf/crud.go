@@ -4,14 +4,11 @@ import (
 	"io"
 
 	"github.com/lyraproj/issue/issue"
-
-	"github.com/lyraproj/puppet-evaluator/pdsl"
-
-	"github.com/lyraproj/puppet-evaluator/evaluator"
-
 	"github.com/lyraproj/pcore/px"
 	"github.com/lyraproj/pcore/types"
 	"github.com/lyraproj/puppet-evaluator/errors"
+	"github.com/lyraproj/puppet-evaluator/evaluator"
+	"github.com/lyraproj/puppet-evaluator/pdsl"
 	"github.com/lyraproj/puppet-parser/parser"
 )
 

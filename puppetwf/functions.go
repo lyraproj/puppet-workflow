@@ -31,7 +31,7 @@ func init() {
 			d.Param(`Object`)
 			d.Function(func(c px.Context, args []px.Value) px.Value {
 				if v, ok := c.Get(ServerBuilderKey); ok {
-					if sb, ok := v.(*service.ServerBuilder); ok {
+					if sb, ok := v.(*service.Builder); ok {
 						handler := args[1]
 						sb.RegisterHandler(handler.PType().Name(), handler, args[0].(px.Type))
 						return px.Undef

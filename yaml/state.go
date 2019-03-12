@@ -3,7 +3,7 @@ package yaml
 import (
 	"github.com/lyraproj/pcore/px"
 	"github.com/lyraproj/pcore/types"
-	"github.com/lyraproj/servicesdk/wfapi"
+	"github.com/lyraproj/servicesdk/wf"
 )
 
 type state struct {
@@ -20,7 +20,7 @@ func (r *state) State() interface{} {
 	return r.unresolvedState
 }
 
-func ResolveState(ctx px.Context, state wfapi.State, input px.OrderedMap) px.PuppetObject {
+func ResolveState(ctx px.Context, state wf.State, input px.OrderedMap) px.PuppetObject {
 	resolvedState := types.ResolveDeferred(ctx, state.State().(px.OrderedMap), input).(px.OrderedMap)
 	resolvedState = convertState(ctx, state.Type(), resolvedState)
 	return px.New(ctx, state.Type(), resolvedState).(px.PuppetObject)

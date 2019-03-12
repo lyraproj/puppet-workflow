@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	hclog "github.com/hashicorp/go-hclog"
-	plugin "github.com/hashicorp/go-plugin"
+	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-plugin"
 	"github.com/lyraproj/pcore/px"
 	"github.com/lyraproj/pcore/types"
 	"github.com/lyraproj/puppet-evaluator/pdsl"
@@ -17,9 +17,6 @@ import (
 	"github.com/lyraproj/servicesdk/grpc"
 	"github.com/lyraproj/servicesdk/serviceapi"
 	"github.com/stretchr/testify/assert"
-
-	//   Ensure that everything is initialized
-	_ "github.com/lyraproj/servicesdk/wf"
 )
 
 func withSampleService(sf func(pdsl.EvaluationContext, serviceapi.Service)) {

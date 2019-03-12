@@ -6,21 +6,15 @@ import (
 	"os"
 
 	"github.com/lyraproj/pcore/pcore"
-
-	"github.com/lyraproj/puppet-evaluator/pdsl"
-
-	"github.com/lyraproj/puppet-evaluator/puppet"
-
 	"github.com/lyraproj/pcore/px"
+	"github.com/lyraproj/puppet-evaluator/pdsl"
+	"github.com/lyraproj/puppet-evaluator/puppet"
 	"github.com/lyraproj/puppet-workflow/yaml"
 	"github.com/lyraproj/servicesdk/service"
 	"github.com/lyraproj/servicesdk/serviceapi"
-
-	// Ensure servicesdk initializaion
-	_ "github.com/lyraproj/servicesdk/wf"
 )
 
-func ExampleNestedObject() {
+func ExampleCreateActivity_nestedObject() {
 	puppet.Do(func(ctx pdsl.EvaluationContext) {
 		ctx.SetLoader(px.NewFileBasedLoader(ctx.Loader(), "../puppetwf/testdata", ``, px.PuppetDataTypePath))
 		workflowFile := "testdata/tf-k8s-sample.yaml"
@@ -30,7 +24,7 @@ func ExampleNestedObject() {
 		}
 		a := yaml.CreateActivity(ctx, workflowFile, content)
 
-		sb := service.NewServerBuilder(ctx, `Yaml::Test`)
+		sb := service.NewServiceBuilder(ctx, `Yaml::Test`)
 		sb.RegisterStateConverter(yaml.ResolveState)
 		sb.RegisterActivity(a)
 		sv := sb.Server()
@@ -56,7 +50,7 @@ func ExampleNestedObject() {
 	// )
 }
 
-func ExampleActivity() {
+func ExampleCreateActivity() {
 	pcore.Do(func(ctx px.Context) {
 		ctx.SetLoader(px.NewFileBasedLoader(ctx.Loader(), "../puppetwf/testdata", ``, px.PuppetDataTypePath))
 		workflowFile := "testdata/aws_vpc.yaml"
@@ -66,7 +60,7 @@ func ExampleActivity() {
 		}
 		a := yaml.CreateActivity(ctx, workflowFile, content)
 
-		sb := service.NewServerBuilder(ctx, `Yaml::Test`)
+		sb := service.NewServiceBuilder(ctx, `Yaml::Test`)
 		sb.RegisterStateConverter(yaml.ResolveState)
 		sb.RegisterActivity(a)
 		sv := sb.Server()

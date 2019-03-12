@@ -17,9 +17,6 @@ import (
 	"github.com/lyraproj/servicesdk/grpc"
 	"github.com/lyraproj/servicesdk/service"
 	"github.com/lyraproj/servicesdk/serviceapi"
-
-	// Ensure initialization of needed packages
-	_ "github.com/lyraproj/servicesdk/wf"
 )
 
 const ManifestLoaderID = `Puppet::ManifestLoader`
@@ -50,7 +47,7 @@ func WithService(serviceName string, sf func(c pdsl.EvaluationContext, s service
 	pcore.Set(`tasks`, types.BooleanTrue)
 	pcore.Set(`workflow`, types.BooleanTrue)
 	puppet.Do(func(c pdsl.EvaluationContext) {
-		sb := service.NewServerBuilder(c, serviceName)
+		sb := service.NewServiceBuilder(c, serviceName)
 		sb.RegisterApiType(`Puppet::Service`, &manifestService{})
 		sb.RegisterAPI(`Puppet::ManifestLoader`, &manifestLoader{c, serviceName})
 		s := sb.Server()
@@ -74,7 +71,7 @@ func (m *manifestLoader) LoadManifest(moduleDir string, fileName string) service
 	}
 
 	mf := munged(fileName)
-	sb := service.NewServerBuilder(ec, mf)
+	sb := service.NewServiceBuilder(ec, mf)
 	ec.Set(ServerBuilderKey, sb)
 
 	if strings.HasSuffix(fileName, `.yaml`) {

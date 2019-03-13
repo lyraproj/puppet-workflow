@@ -1,14 +1,10 @@
 package main
 
 import (
-	"github.com/hashicorp/go-hclog"
-	"github.com/lyraproj/puppet-workflow/puppet"
 	"os"
 
-	// Ensure that Pcore is initialized
-	_ "github.com/lyraproj/puppet-evaluator/pcore"
-	_ "github.com/lyraproj/puppet-workflow/puppet/functions"
-	_ "github.com/lyraproj/servicesdk/wf"
+	"github.com/hashicorp/go-hclog"
+	"github.com/lyraproj/puppet-workflow/puppetwf"
 )
 
 func main() {
@@ -19,5 +15,5 @@ func main() {
 		IncludeLocation: false,
 		Output:          os.Stderr,
 	}
-	puppet.Start(`Puppet`)
+	puppetwf.Start(`Puppet`)
 }

@@ -2,39 +2,29 @@ package yaml_test
 
 import (
 	"fmt"
-	"github.com/lyraproj/puppet-evaluator/eval"
+	"io/ioutil"
+	"os"
+
+	"github.com/lyraproj/pcore/pcore"
+	"github.com/lyraproj/pcore/px"
+	"github.com/lyraproj/puppet-evaluator/pdsl"
+	"github.com/lyraproj/puppet-evaluator/puppet"
 	"github.com/lyraproj/puppet-workflow/yaml"
 	"github.com/lyraproj/servicesdk/service"
 	"github.com/lyraproj/servicesdk/serviceapi"
-	"io/ioutil"
-	"os"
-	// Ensure Pcore and lookup are initialized
-	_ "github.com/lyraproj/puppet-evaluator/pcore"
-	_ "github.com/lyraproj/servicesdk/wf"
 )
 
-func ExampleNestedObject() {
-	eval.Puppet.Do(func(ctx eval.Context) {
-		typesFile := "../puppet/testdata/types/TerraformKubernetes.pp"
-		content, err := ioutil.ReadFile(typesFile)
-		if err != nil {
-			panic(err.Error())
-		}
-		ast := ctx.ParseAndValidate(typesFile, string(content), false)
-		ctx.AddDefinitions(ast)
-		_, err = eval.TopEvaluate(ctx, ast)
-		if err != nil {
-			panic(err.Error())
-		}
-
+func ExampleCreateActivity_nestedObject() {
+	puppet.Do(func(ctx pdsl.EvaluationContext) {
+		ctx.SetLoader(px.NewFileBasedLoader(ctx.Loader(), "../puppetwf/testdata", ``, px.PuppetDataTypePath))
 		workflowFile := "testdata/tf-k8s-sample.yaml"
-		content, err = ioutil.ReadFile(workflowFile)
+		content, err := ioutil.ReadFile(workflowFile)
 		if err != nil {
 			panic(err.Error())
 		}
 		a := yaml.CreateActivity(ctx, workflowFile, content)
 
-		sb := service.NewServerBuilder(ctx, `Yaml::Test`)
+		sb := service.NewServiceBuilder(ctx, `Yaml::Test`)
 		sb.RegisterStateConverter(yaml.ResolveState)
 		sb.RegisterActivity(a)
 		sv := sb.Server()
@@ -42,10 +32,10 @@ func ExampleNestedObject() {
 
 		wf := defs[0]
 		ac, _ := wf.Properties().Get4(`activities`)
-		rs := ac.(eval.List).At(0).(serviceapi.Definition)
+		rs := ac.(px.List).At(0).(serviceapi.Definition)
 
-		st := sv.State(ctx, rs.Identifier().Name(), eval.EMPTY_MAP)
-		st.ToString(os.Stdout, eval.PRETTY, nil)
+		st := sv.State(ctx, rs.Identifier().Name(), px.EmptyMap)
+		st.ToString(os.Stdout, px.Pretty, nil)
 		fmt.Println()
 	})
 
@@ -60,40 +50,29 @@ func ExampleNestedObject() {
 	// )
 }
 
-func ExampleActivity() {
-	eval.Puppet.Do(func(ctx eval.Context) {
-		typesFile := "../puppet/testdata/types/Aws.pp"
-		content, err := ioutil.ReadFile(typesFile)
-		if err != nil {
-			panic(err.Error())
-		}
-		ast := ctx.ParseAndValidate(typesFile, string(content), false)
-		ctx.AddDefinitions(ast)
-		_, err = eval.TopEvaluate(ctx, ast)
-		if err != nil {
-			panic(err.Error())
-		}
-
+func ExampleCreateActivity() {
+	pcore.Do(func(ctx px.Context) {
+		ctx.SetLoader(px.NewFileBasedLoader(ctx.Loader(), "../puppetwf/testdata", ``, px.PuppetDataTypePath))
 		workflowFile := "testdata/aws_vpc.yaml"
-		content, err = ioutil.ReadFile(workflowFile)
+		content, err := ioutil.ReadFile(workflowFile)
 		if err != nil {
 			panic(err.Error())
 		}
 		a := yaml.CreateActivity(ctx, workflowFile, content)
 
-		sb := service.NewServerBuilder(ctx, `Yaml::Test`)
+		sb := service.NewServiceBuilder(ctx, `Yaml::Test`)
 		sb.RegisterStateConverter(yaml.ResolveState)
 		sb.RegisterActivity(a)
 		sv := sb.Server()
 		_, defs := sv.Metadata(ctx)
 
 		wf := defs[0]
-		wf.ToString(os.Stdout, eval.PRETTY, nil)
+		wf.ToString(os.Stdout, px.Pretty, nil)
 		fmt.Println()
 
-		st := sv.State(ctx, `aws_vpc::vpc`, eval.Wrap(ctx, map[string]interface{}{
-			`tags`:   map[string]string{`a`: `av`, `b`: `bv`}}).(eval.OrderedMap))
-		st.ToString(os.Stdout, eval.PRETTY, nil)
+		st := sv.State(ctx, `aws_vpc::vpc`, px.Wrap(ctx, map[string]interface{}{
+			`tags`: map[string]string{`a`: `av`, `b`: `bv`}}).(px.OrderedMap))
+		st.ToString(os.Stdout, px.Pretty, nil)
 		fmt.Println()
 	})
 

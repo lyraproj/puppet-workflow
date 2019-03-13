@@ -1,66 +1,66 @@
 package yaml
 
 import (
-	"github.com/lyraproj/issue/issue"
-	"github.com/lyraproj/puppet-evaluator/eval"
-	"github.com/lyraproj/puppet-evaluator/impl"
-	"github.com/lyraproj/puppet-evaluator/types"
-	"github.com/lyraproj/puppet-evaluator/yaml"
-	"github.com/lyraproj/servicesdk/wfapi"
 	"regexp"
 	"strings"
 	"unicode"
+
+	"github.com/lyraproj/issue/issue"
+	"github.com/lyraproj/pcore/px"
+	"github.com/lyraproj/pcore/types"
+	"github.com/lyraproj/pcore/yaml"
+	"github.com/lyraproj/servicesdk/wf"
 )
 
 type activity struct {
 	name     string
 	parent   *activity
-	hash     eval.OrderedMap
-	rt       eval.ObjectType
-	activity wfapi.Activity
+	hash     px.OrderedMap
+	rt       px.ObjectType
+	activity wf.Activity
 }
 
 const kindWorkflow = 1
 const kindResource = 2
 
-func CreateActivity(c eval.Context, file string, content []byte) wfapi.Activity {
+func CreateActivity(c px.Context, file string, content []byte) wf.Activity {
 	c.StackPush(issue.NewLocation(file, 0, 0))
 	defer c.StackPop()
 
 	v := yaml.Unmarshal(c, content)
-	h, ok := v.(eval.OrderedMap)
+	h, ok := v.(px.OrderedMap)
 	if !(ok && h.Len() == 1) {
-		panic(eval.Error(WF_NOT_ONE_DEFINITION, issue.NO_ARGS))
+		panic(px.Error(NotOneDefinition, issue.NO_ARGS))
 	}
 
 	var name string
-	var def eval.OrderedMap
-	h.EachPair(func(k, v eval.Value) {
-		if n, ok := k.(eval.StringValue); ok {
+	var def px.OrderedMap
+	h.EachPair(func(k, v px.Value) {
+		if n, ok := k.(px.StringValue); ok {
 			name = n.String()
 		}
-		if m, ok := v.(eval.OrderedMap); ok {
+		if m, ok := v.(px.OrderedMap); ok {
 			def = m
 		}
 	})
 	if name == `` || def == nil {
-		panic(eval.Error(WF_NOT_ACTIVITY, issue.NO_ARGS))
+		panic(px.Error(NotActivity, issue.NO_ARGS))
 	}
 
 	a := newActivity(name, nil, def)
 	switch a.activityKind() {
 	case kindWorkflow:
-		return wfapi.NewWorkflow(c, func(wb wfapi.WorkflowBuilder) {
+		return wf.NewWorkflow(c, func(wb wf.WorkflowBuilder) {
 			a.buildWorkflow(wb)
 		})
 	default:
-		return wfapi.NewResource(c, func(wb wfapi.ResourceBuilder) {
+		return wf.NewResource(c, func(wb wf.ResourceBuilder) {
 			a.buildResource(wb)
 		})
 	}
 }
 
-func newActivity(name string, parent *activity, ex eval.OrderedMap) *activity {
+func newActivity(name string, parent *activity, ex px.OrderedMap) *activity {
 	ca := &activity{parent: parent, hash: ex}
 	sgs := strings.Split(name, `::`)
 	ca.name = sgs[len(sgs)-1]
@@ -75,10 +75,10 @@ func (a *activity) activityKind() int {
 	if m.IncludesKey2(`state`) {
 		return kindResource
 	}
-	panic(eval.Error(WF_NOT_ACTIVITY, issue.NO_ARGS))
+	panic(px.Error(NotActivity, issue.NO_ARGS))
 }
 
-func (a *activity) Activity() wfapi.Activity {
+func (a *activity) Activity() wf.Activity {
 	return a.activity
 }
 
@@ -90,14 +90,14 @@ func (a *activity) Label() string {
 	return a.Style() + " " + a.Name()
 }
 
-func (a *activity) buildActivity(builder wfapi.Builder) {
+func (a *activity) buildActivity(builder wf.Builder) {
 	builder.Name(a.Name())
 	builder.When(a.getWhen())
 	builder.Input(a.extractParameters(builder.Context(), a.hash, `input`, false)...)
 	builder.Output(a.extractParameters(builder.Context(), a.hash, `output`, true)...)
 }
 
-func (a *activity) buildResource(builder wfapi.ResourceBuilder) {
+func (a *activity) buildResource(builder wf.ResourceBuilder) {
 	c := builder.Context()
 
 	builder.Name(a.Name())
@@ -113,33 +113,29 @@ func (a *activity) buildResource(builder wfapi.ResourceBuilder) {
 	}
 }
 
-func (a *activity) buildAction(builder wfapi.ActionBuilder) {
-	a.buildActivity(builder)
-}
-
-func (a *activity) buildWorkflow(builder wfapi.WorkflowBuilder) {
+func (a *activity) buildWorkflow(builder wf.WorkflowBuilder) {
 	a.buildActivity(builder)
 	de, ok := a.hash.Get4(`activities`)
 	if !ok {
 		return
 	}
 
-	block, ok := de.(eval.OrderedMap)
+	block, ok := de.(px.OrderedMap)
 	if !ok {
-		panic(eval.Error(WF_FIELD_TYPE_MISMATCH, issue.H{`activity`: a, `field`: `definition`, `expected`: `CodeBlock`, `actual`: de}))
+		panic(px.Error(FieldTypeMismatch, issue.H{`activity`: a, `field`: `definition`, `expected`: `CodeBlock`, `actual`: de}))
 	}
 
 	// Block should only contain activity expressions or something is wrong.
-	block.EachPair(func(k, v eval.Value) {
-		if as, ok := v.(eval.OrderedMap); ok {
+	block.EachPair(func(k, v px.Value) {
+		if as, ok := v.(px.OrderedMap); ok {
 			a.workflowActivity(builder, k.String(), as)
 		} else {
-			panic(eval.Error(WF_NOT_ACTIVITY, issue.H{`actual`: as}))
+			panic(px.Error(NotActivity, issue.H{`actual`: as}))
 		}
 	})
 }
 
-func (a *activity) workflowActivity(builder wfapi.WorkflowBuilder, name string, as eval.OrderedMap) {
+func (a *activity) workflowActivity(builder wf.WorkflowBuilder, name string, as px.OrderedMap) {
 	ac := newActivity(name, a, as)
 	if _, ok := ac.hash.Get4(`iteration`); ok {
 		builder.Iterator(ac.buildIterator)
@@ -162,32 +158,22 @@ func (a *activity) Style() string {
 	}
 }
 
-func (a *activity) inferInput() []eval.Parameter {
-	// TODO:
-	return eval.NoParameters
-}
-
-func (a *activity) inferOutput() []eval.Parameter {
-	// TODO:
-	return eval.NoParameters
-}
-
-func (a *activity) buildIterator(builder wfapi.IteratorBuilder) {
+func (a *activity) buildIterator(builder wf.IteratorBuilder) {
 	v, _ := a.hash.Get4(`iteration`)
-	iteratorDef, ok := v.(*types.HashValue)
+	iteratorDef, ok := v.(*types.Hash)
 	if !ok {
-		panic(eval.Error(WF_FIELD_TYPE_MISMATCH, issue.H{`activity`: a, `field`: `iteration`, `expected`: `Hash`, `actual`: v.PType()}))
+		panic(px.Error(FieldTypeMismatch, issue.H{`activity`: a, `field`: `iteration`, `expected`: `Hash`, `actual`: v.PType()}))
 	}
 
-	v = iteratorDef.Get5(`function`, eval.UNDEF)
-	style, ok := v.(eval.StringValue)
+	v = iteratorDef.Get5(`function`, px.Undef)
+	style, ok := v.(px.StringValue)
 	if !ok {
-		panic(eval.Error(WF_FIELD_TYPE_MISMATCH, issue.H{`activity`: a, `field`: `iteration.style`, `expected`: `String`, `actual`: v}))
+		panic(px.Error(FieldTypeMismatch, issue.H{`activity`: a, `field`: `iteration.style`, `expected`: `String`, `actual`: v}))
 	}
 	if name, ok := iteratorDef.Get4(`name`); ok {
 		builder.Name(name.String())
 	}
-	builder.Style(wfapi.NewIterationStyle(style.String()))
+	builder.Style(wf.NewIterationStyle(style.String()))
 	builder.Over(a.extractParameters(builder.Context(), iteratorDef, `over`, false)...)
 	builder.Variables(a.extractParameters(builder.Context(), iteratorDef, `vars`, false)...)
 
@@ -206,20 +192,20 @@ func (a *activity) getWhen() string {
 	return ``
 }
 
-func (a *activity) extractParameters(c eval.Context, props eval.OrderedMap, field string, isOutput bool) []eval.Parameter {
+func (a *activity) extractParameters(c px.Context, props px.OrderedMap, field string, isOutput bool) []px.Parameter {
 	if props == nil {
-		return []eval.Parameter{}
+		return []px.Parameter{}
 	}
 
 	v, ok := props.Get4(field)
 	if !ok {
-		return []eval.Parameter{}
+		return []px.Parameter{}
 	}
 
-	if ph, ok := v.(eval.OrderedMap); ok {
-		params := make([]eval.Parameter, 0, ph.Len())
-		ph.EachPair(func(k, v eval.Value) {
-			var p eval.Parameter
+	if ph, ok := v.(px.OrderedMap); ok {
+		params := make([]px.Parameter, 0, ph.Len())
+		ph.EachPair(func(k, v px.Value) {
+			var p px.Parameter
 			if isOutput {
 				p = a.makeOutputParameter(c, field, k, v)
 			} else {
@@ -230,64 +216,63 @@ func (a *activity) extractParameters(c eval.Context, props eval.OrderedMap, fiel
 		return params
 	}
 
-	if _, ok := v.(eval.StringValue); ok {
+	if _, ok := v.(px.StringValue); ok {
 		// Allow single name as a convenience
-		v = types.WrapValues([]eval.Value{v})
+		v = types.WrapValues([]px.Value{v})
 	}
 
-	if pa, ok := v.(*types.ArrayValue); ok {
+	if pa, ok := v.(*types.Array); ok {
 		// List of names.
-		params := make([]eval.Parameter, pa.Len())
-		pa.EachWithIndex(func(e eval.Value, i int) {
-			if ne, ok := e.(eval.StringValue); ok {
+		params := make([]px.Parameter, pa.Len())
+		pa.EachWithIndex(func(e px.Value, i int) {
+			if ne, ok := e.(px.StringValue); ok {
 				n := ne.String()
 				if isOutput && a.activityKind() == kindResource {
 					// Names must match attribute names
-					params[i] = impl.NewParameter(n, a.attributeType(c, n), nil, false)
+					params[i] = px.NewParameter(n, a.attributeType(c, n), nil, false)
 				} else {
-					params[i] = impl.NewParameter(n, types.DefaultAnyType(), nil, false)
+					params[i] = px.NewParameter(n, types.DefaultAnyType(), nil, false)
 				}
 			} else {
-				panic(eval.Error(WF_BAD_PARAMETER, issue.H{`activity`: a, `name`: e, `parameterType`: field}))
+				panic(px.Error(BadParameter, issue.H{`activity`: a, `name`: e, `parameterType`: field}))
 			}
 		})
 		return params
 	}
-	panic(eval.Error(WF_FIELD_TYPE_MISMATCH, issue.H{`activity`: a, `field`: field, `expected`: `Hash`, `actual`: v.PType()}))
+	panic(px.Error(FieldTypeMismatch, issue.H{`activity`: a, `field`: field, `expected`: `Hash`, `actual`: v.PType()}))
 }
 
-func (a *activity) makeInputParameter(c eval.Context, field string, k, v eval.Value) (param eval.Parameter) {
-	if n, ok := k.(eval.StringValue); ok {
+func (a *activity) makeInputParameter(c px.Context, field string, k, v px.Value) (param px.Parameter) {
+	if n, ok := k.(px.StringValue); ok {
 		name := n.String()
-		switch v.(type) {
-		case eval.Parameter:
-			param = v.(eval.Parameter)
-		case eval.StringValue:
-			param = impl.NewParameter(name, c.ParseType2(v.String()), nil, false)
-		case eval.OrderedMap:
-			m := v.(eval.OrderedMap)
-			tn, ok := a.getStringProperty(m, `type`)
+		switch v := v.(type) {
+		case px.Parameter:
+			param = v
+		case px.StringValue:
+			param = px.NewParameter(name, c.ParseType(v.String()), nil, false)
+		case px.OrderedMap:
+			tn, ok := a.getStringProperty(v, `type`)
 			if !ok {
 				break
 			}
-			var val eval.Value
-			tp := c.ParseType2(tn)
-			if lu, ok := m.Get4(`lookup`); ok {
-				var args []eval.Value
-				if a, ok := lu.(*types.ArrayValue); ok {
-					args = a.AppendTo(make([]eval.Value, 0, a.Len()))
+			var val px.Value
+			tp := c.ParseType(tn)
+			if lu, ok := v.Get4(`lookup`); ok {
+				var args []px.Value
+				if a, ok := lu.(*types.Array); ok {
+					args = a.AppendTo(make([]px.Value, 0, a.Len()))
 				} else {
-					args = []eval.Value{lu}
+					args = []px.Value{lu}
 				}
 				val = types.NewDeferred(`lookup`, args...)
 			} else {
-				val = m.Get5(`value`, nil)
+				val = v.Get5(`value`, nil)
 			}
-			param = impl.NewParameter(name, tp, val, false)
+			param = px.NewParameter(name, tp, val, false)
 		}
 	}
 	if param == nil {
-		panic(eval.Error(WF_BAD_PARAMETER, issue.H{
+		panic(px.Error(BadParameter, issue.H{
 			`activity`: a, `name`: k, `parameterType`: `input`}))
 	}
 	return
@@ -295,31 +280,30 @@ func (a *activity) makeInputParameter(c eval.Context, field string, k, v eval.Va
 
 var varNamePattern = regexp.MustCompile(`\A[a-z]\w*(?:\.[a-z]\w*)*\z`)
 
-func (a *activity) makeOutputParameter(c eval.Context, field string, k, v eval.Value) (param eval.Parameter) {
+func (a *activity) makeOutputParameter(c px.Context, field string, k, v px.Value) (param px.Parameter) {
 	// TODO: Iterator output etc.
-	if n, ok := k.(eval.StringValue); ok {
+	if n, ok := k.(px.StringValue); ok {
 		name := n.String()
-		switch v.(type) {
-		case eval.Parameter:
-			param = v.(eval.Parameter)
-		case eval.StringValue:
+		switch v := v.(type) {
+		case px.Parameter:
+			param = v
+		case px.StringValue:
 			s := v.String()
 			if len(s) > 0 && unicode.IsUpper(rune(s[0])) {
 				if a.activityKind() == kindWorkflow {
-					param = impl.NewParameter(name, c.ParseType2(s), nil, false)
+					param = px.NewParameter(name, c.ParseType(s), nil, false)
 				}
 			} else if varNamePattern.MatchString(s) {
 				if a.activityKind() == kindResource {
 					// Alias declaration
-					param = impl.NewParameter(name, a.attributeType(c, s), v, false)
+					param = px.NewParameter(name, a.attributeType(c, s), v, false)
 				}
 			}
-		case eval.List:
+		case px.List:
 			if a.activityKind() == kindResource {
-				vl := v.(eval.List)
-				ts := make([]eval.Type, 0, vl.Len())
-				if v.(eval.List).All(func(e eval.Value) bool {
-					if sv, ok := e.(eval.StringValue); ok {
+				ts := make([]px.Type, 0, v.Len())
+				if v.All(func(e px.Value) bool {
+					if sv, ok := e.(px.StringValue); ok {
 						s := sv.String()
 						if varNamePattern.MatchString(s) {
 							ts = append(ts, a.attributeType(c, s))
@@ -328,40 +312,40 @@ func (a *activity) makeOutputParameter(c eval.Context, field string, k, v eval.V
 					}
 					return false
 				}) {
-					param = impl.NewParameter(name, types.NewTupleType(ts, nil), v, false)
+					param = px.NewParameter(name, types.NewTupleType(ts, nil), v, false)
 				}
 			}
 		}
 	}
 	if param == nil {
-		panic(eval.Error(WF_BAD_PARAMETER, issue.H{
+		panic(px.Error(BadParameter, issue.H{
 			`activity`: a, `name`: k, `parameterType`: `output`}))
 	}
 	return
 }
 
-func (a *activity) attributeType(c eval.Context, name string) eval.Type {
+func (a *activity) attributeType(c px.Context, name string) px.Type {
 	tp := a.getResourceType(c)
 	if m, ok := tp.Member(name); ok {
-		if a, ok := m.(eval.Attribute); ok {
+		if a, ok := m.(px.Attribute); ok {
 			return a.Type()
 		}
 	}
-	panic(eval.Error(eval.EVAL_ATTRIBUTE_NOT_FOUND, issue.H{`type`: tp, `name`: name}))
+	panic(px.Error(px.AttributeNotFound, issue.H{`type`: tp, `name`: name}))
 }
 
-func (a *activity) getState(c eval.Context, input []eval.Parameter) (eval.OrderedMap, []eval.Parameter) {
+func (a *activity) getState(c px.Context, input []px.Parameter) (px.OrderedMap, []px.Parameter) {
 	de, ok := a.hash.Get4(`state`)
 	if !ok {
-		return eval.EMPTY_MAP, []eval.Parameter{}
+		return px.EmptyMap, []px.Parameter{}
 	}
 
-	if hash, ok := de.(eval.OrderedMap); ok {
+	if hash, ok := de.(px.OrderedMap); ok {
 		// Ensure that hash conforms to init of type with respect to attribute names
 		// and transform all variable references to Deferred expressions
 		es := make([]*types.HashEntry, 0, hash.Len())
-		if hash.AllPairs(func(k, v eval.Value) bool {
-			if sv, ok := k.(eval.StringValue); ok {
+		if hash.AllPairs(func(k, v px.Value) bool {
+			if sv, ok := k.(px.StringValue); ok {
 				s := sv.String()
 				if varNamePattern.MatchString(s) {
 					at := a.attributeType(c, s)
@@ -375,20 +359,20 @@ func (a *activity) getState(c eval.Context, input []eval.Parameter) (eval.Ordere
 			return types.WrapHash(es), input
 		}
 	}
-	panic(eval.Error(WF_FIELD_TYPE_MISMATCH, issue.H{`activity`: a, `field`: `definition`, `expected`: `Hash`, `actual`: de}))
+	panic(px.Error(FieldTypeMismatch, issue.H{`activity`: a, `field`: `definition`, `expected`: `Hash`, `actual`: de}))
 }
 
-func stripOptional(t eval.Type) eval.Type {
+func stripOptional(t px.Type) px.Type {
 	if ot, ok := t.(*types.OptionalType); ok {
 		return stripOptional(ot.ContainedType())
 	}
 	return t
 }
 
-func (a *activity) resolveInputs(v eval.Value, at eval.Type, input []eval.Parameter) (eval.Value, []eval.Parameter) {
-	switch v.(type) {
-	case eval.StringValue:
-		s := v.String()
+func (a *activity) resolveInputs(v px.Value, at px.Type, input []px.Parameter) (px.Value, []px.Parameter) {
+	switch vr := v.(type) {
+	case px.StringValue:
+		s := vr.String()
 		if len(s) > 1 && s[0] == '$' {
 			vn := s[1:]
 			if varNamePattern.MatchString(vn) {
@@ -398,26 +382,25 @@ func (a *activity) resolveInputs(v eval.Value, at eval.Type, input []eval.Parame
 					if ip.Name() == vn {
 						if ip.Type() == types.DefaultAnyType() {
 							// Replace untyped with typed
-							input[i] = impl.NewParameter(vn, at, nil, false)
+							input[i] = px.NewParameter(vn, at, nil, false)
 						}
 						found = true
 						break
 					}
 				}
 				if !found {
-					input = append(input, impl.NewParameter(vn, at, nil, false))
+					input = append(input, px.NewParameter(vn, at, nil, false))
 				}
 				v = types.NewDeferred(s)
 			}
 		}
-	case eval.OrderedMap:
-		mv := v.(eval.OrderedMap)
-		es := make([]*types.HashEntry, 0, mv.Len())
+	case px.OrderedMap:
+		es := make([]*types.HashEntry, 0, vr.Len())
 		nta := stripOptional(at)
-		if ot, ok := nta.(eval.TypeWithCallableMembers); ok {
-			mv.EachPair(func(k, av eval.Value) {
+		if ot, ok := nta.(px.TypeWithCallableMembers); ok {
+			vr.EachPair(func(k, av px.Value) {
 				if m, ok := ot.Member(k.String()); ok {
-					av, input = a.resolveInputs(av, m.(eval.AnnotatedMember).Type(), input)
+					av, input = a.resolveInputs(av, m.(px.AnnotatedMember).Type(), input)
 				} else {
 					av, input = a.resolveInputs(av, types.DefaultAnyType(), input)
 				}
@@ -425,13 +408,13 @@ func (a *activity) resolveInputs(v eval.Value, at eval.Type, input []eval.Parame
 			})
 		} else if ht, ok := nta.(*types.HashType); ok {
 			et := ht.ValueType()
-			mv.EachPair(func(k, av eval.Value) {
+			vr.EachPair(func(k, av px.Value) {
 				av, input = a.resolveInputs(av, et, input)
 				es = append(es, types.WrapHashEntry(k, av))
 			})
 		} else if st, ok := nta.(*types.StructType); ok {
 			hm := st.HashedMembers()
-			mv.EachPair(func(k, av eval.Value) {
+			vr.EachPair(func(k, av px.Value) {
 				if m, ok := hm[k.String()]; ok {
 					av, input = a.resolveInputs(av, m.Value(), input)
 				} else {
@@ -441,19 +424,18 @@ func (a *activity) resolveInputs(v eval.Value, at eval.Type, input []eval.Parame
 			})
 		}
 		v = types.WrapHash(es)
-	case eval.List:
-		lv := v.(eval.List)
-		es := make([]eval.Value, lv.Len())
+	case px.List:
+		es := make([]px.Value, vr.Len())
 		nta := stripOptional(at)
 		if st, ok := nta.(*types.ArrayType); ok {
 			et := st.ElementType()
-			lv.EachWithIndex(func(ev eval.Value, i int) {
+			vr.EachWithIndex(func(ev px.Value, i int) {
 				ev, input = a.resolveInputs(ev, et, input)
 				es[i] = ev
 			})
 		} else if tt, ok := nta.(*types.TupleType); ok {
 			ts := tt.Types()
-			lv.EachWithIndex(func(ev eval.Value, i int) {
+			vr.EachWithIndex(func(ev px.Value, i int) {
 				if i < len(ts) {
 					ev, input = a.resolveInputs(ev, ts[i], input)
 				} else {
@@ -467,37 +449,37 @@ func (a *activity) resolveInputs(v eval.Value, at eval.Type, input []eval.Parame
 	return v, input
 }
 
-func (a *activity) getResourceType(c eval.Context) eval.ObjectType {
+func (a *activity) getResourceType(c px.Context) px.ObjectType {
 	if a.rt != nil {
 		return a.rt
 	}
 	n := a.Name()
 	if tv, ok := a.hash.Get4(`type`); ok {
-		if t, ok := tv.(eval.ObjectType); ok {
+		if t, ok := tv.(px.ObjectType); ok {
 			a.rt = t
 			return t
 		}
-		if s, ok := tv.(eval.StringValue); ok {
+		if s, ok := tv.(px.StringValue); ok {
 			n = s.String()
 		} else {
-			panic(eval.Error(WF_FIELD_TYPE_MISMATCH, issue.H{`activity`: a, `field`: `definition`, `expected`: `Variant[String,ObjectType]`, `actual`: tv}))
+			panic(px.Error(FieldTypeMismatch, issue.H{`activity`: a, `field`: `definition`, `expected`: `Variant[String,ObjectType]`, `actual`: tv}))
 		}
 	} else {
 		ts := a.getTypespace()
 		if ts != `` {
-			n = ts + `::` + wfapi.LeafName(n)
+			n = ts + `::` + wf.LeafName(n)
 		}
 	}
 
-	tn := eval.NewTypedName(eval.NsType, n)
-	if t, ok := eval.Load(c, tn); ok {
-		if pt, ok := t.(eval.ObjectType); ok {
+	tn := px.NewTypedName(px.NsType, n)
+	if t, ok := px.Load(c, tn); ok {
+		if pt, ok := t.(px.ObjectType); ok {
 			a.rt = pt
 			return pt
 		}
-		panic(eval.Error(WF_FIELD_TYPE_MISMATCH, issue.H{`activity`: a, `field`: `definition`, `expected`: `ObjectType`, `actual`: t}))
+		panic(px.Error(FieldTypeMismatch, issue.H{`activity`: a, `field`: `definition`, `expected`: `ObjectType`, `actual`: t}))
 	}
-	panic(eval.Error(eval.EVAL_UNRESOLVED_TYPE, issue.H{`typeString`: tn.Name()}))
+	panic(px.Error(px.UnresolvedType, issue.H{`typeString`: tn.Name()}))
 }
 
 func (a *activity) getTypespace() string {
@@ -510,14 +492,14 @@ func (a *activity) getTypespace() string {
 	return ``
 }
 
-func (a *activity) getStringProperty(properties eval.OrderedMap, field string) (string, bool) {
+func (a *activity) getStringProperty(properties px.OrderedMap, field string) (string, bool) {
 	v, ok := properties.Get4(field)
 	if !ok {
 		return ``, false
 	}
 
-	if s, ok := v.(eval.StringValue); ok {
+	if s, ok := v.(px.StringValue); ok {
 		return s.String(), true
 	}
-	panic(eval.Error(WF_FIELD_TYPE_MISMATCH, issue.H{`activity`: a, `field`: field, `expected`: `String`, `actual`: v.PType()}))
+	panic(px.Error(FieldTypeMismatch, issue.H{`activity`: a, `field`: field, `expected`: `String`, `actual`: v.PType()}))
 }

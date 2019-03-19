@@ -37,7 +37,7 @@ func init() {
 						return px.Undef
 					}
 				}
-				panic(px.Error(NoServerBuilderInContext, issue.NO_ARGS))
+				panic(px.Error(NoServerBuilderInContext, issue.NoArgs))
 			})
 		},
 	)

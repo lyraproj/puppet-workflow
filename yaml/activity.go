@@ -30,7 +30,7 @@ func CreateActivity(c px.Context, file string, content []byte) wf.Activity {
 	v := yaml.Unmarshal(c, content)
 	h, ok := v.(px.OrderedMap)
 	if !(ok && h.Len() == 1) {
-		panic(px.Error(NotOneDefinition, issue.NO_ARGS))
+		panic(px.Error(NotOneDefinition, issue.NoArgs))
 	}
 
 	var name string
@@ -44,7 +44,7 @@ func CreateActivity(c px.Context, file string, content []byte) wf.Activity {
 		}
 	})
 	if name == `` || def == nil {
-		panic(px.Error(NotActivity, issue.NO_ARGS))
+		panic(px.Error(NotActivity, issue.NoArgs))
 	}
 
 	a := newActivity(name, nil, def)
@@ -75,7 +75,7 @@ func (a *activity) activityKind() int {
 	if m.IncludesKey2(`state`) {
 		return kindResource
 	}
-	panic(px.Error(NotActivity, issue.NO_ARGS))
+	panic(px.Error(NotActivity, issue.NoArgs))
 }
 
 func (a *activity) Activity() wf.Activity {

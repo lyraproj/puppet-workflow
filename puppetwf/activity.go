@@ -219,7 +219,7 @@ func (a *puppetActivity) getAPI(c px.Context, input []px.Parameter) px.PuppetObj
 		return NewDo(a.Name(), input, a.expression)
 	}
 	if de == nil {
-		panic(c.Error(a.expression, NoDefinition, issue.NO_ARGS))
+		panic(c.Error(a.expression, NoDefinition, issue.NoArgs))
 	}
 
 	block, ok := de.(*parser.BlockExpression)

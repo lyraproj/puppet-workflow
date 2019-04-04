@@ -27,7 +27,7 @@ func ResolveState(ctx px.Context, state wf.State, input px.OrderedMap) px.Puppet
 		input.EachPair(func(k, v px.Value) {
 			scope.Set(k.String(), v)
 		})
-		resolvedState := types.ResolveDeferred(ctx, state.State().(px.OrderedMap), scope)
-		return px.New(ctx, state.Type(), resolvedState).(px.PuppetObject)
+		st := types.ResolveDeferred(ctx, state.State().(px.OrderedMap), scope).(px.OrderedMap)
+		return px.New(ctx, state.Type(), st).(px.PuppetObject)
 	}).(px.PuppetObject)
 }

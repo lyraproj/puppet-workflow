@@ -40,13 +40,13 @@ func ExampleCreateActivity_nestedObject() {
 	})
 
 	// Output:
-	// TerraformKubernetes::Kubernetes_namespace(
-	//   'metadata' => TerraformKubernetes::Kubernetes_namespace_metadata_721(
+	// Kubernetes::Namespace(
+	//   'metadata' => {
 	//     'name' => 'terraform-lyra',
 	//     'resource_version' => 'hi',
 	//     'self_link' => 'me'
-	//   ),
-	//   'kubernetes_namespace_id' => 'ignore'
+	//   },
+	//   'namespace_id' => 'ignore'
 	// )
 }
 

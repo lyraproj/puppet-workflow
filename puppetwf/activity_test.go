@@ -22,7 +22,7 @@ import (
 func withSampleService(sf func(pdsl.EvaluationContext, serviceapi.Service)) {
 	puppet.Do(func(ctx pdsl.EvaluationContext) {
 		// Command to start plug-in and read a given manifest
-		cmd := exec.Command("go", "run", "../main.go", "--debug")
+		cmd := exec.Command("go", "run", "../main/main.go", "--debug")
 
 		// Logger that prints JSON on Stderr
 		logger := hclog.New(&hclog.LoggerOptions{

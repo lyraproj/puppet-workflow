@@ -422,6 +422,12 @@ func (a *activity) resolveInputs(v px.Value, at px.Type, input []px.Parameter) (
 				}
 				es = append(es, types.WrapHashEntry(k, av))
 			})
+		} else {
+			et := types.DefaultAnyType()
+			vr.EachPair(func(k, av px.Value) {
+				av, input = a.resolveInputs(av, et, input)
+				es = append(es, types.WrapHashEntry(k, av))
+			})
 		}
 		v = types.WrapHash(es)
 	case px.List:
@@ -441,6 +447,12 @@ func (a *activity) resolveInputs(v px.Value, at px.Type, input []px.Parameter) (
 				} else {
 					ev, input = a.resolveInputs(ev, types.DefaultAnyType(), input)
 				}
+				es[i] = ev
+			})
+		} else {
+			et := types.DefaultAnyType()
+			vr.EachWithIndex(func(ev px.Value, i int) {
+				ev, input = a.resolveInputs(ev, et, input)
 				es[i] = ev
 			})
 		}

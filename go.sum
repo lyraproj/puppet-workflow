@@ -29,6 +29,8 @@ github.com/lyraproj/pcore v0.0.0-20190403155521-a72b635b7c05 h1:DHDepxY8viIusn1/
 github.com/lyraproj/pcore v0.0.0-20190403155521-a72b635b7c05/go.mod h1:zaYm7Mn2rIKNNpcMGy+QkWUqoTpGAQiAmVwJpJ4wYDc=
 github.com/lyraproj/pcore v0.0.0-20190405075742-500ef041fe7e h1:BpZKLbm6kW3W3+WeCnXkIRaUWpHx7mIFTZq/v8s47Bc=
 github.com/lyraproj/pcore v0.0.0-20190405075742-500ef041fe7e/go.mod h1:zaYm7Mn2rIKNNpcMGy+QkWUqoTpGAQiAmVwJpJ4wYDc=
+github.com/lyraproj/pcore v0.0.0-20190406122651-bf67b7db25c6 h1:vENugHAMnNCBqhUl8OMZEonJ4eEgsdP5RU3WiM4PiNI=
+github.com/lyraproj/pcore v0.0.0-20190406122651-bf67b7db25c6/go.mod h1:zaYm7Mn2rIKNNpcMGy+QkWUqoTpGAQiAmVwJpJ4wYDc=
 github.com/lyraproj/puppet-evaluator v0.0.0-20190319215018-daa49117e01b h1:tfMDAZWV00pB8cb1dv3hvPoFlLEkJlzn5QZHTK/aDGg=
 github.com/lyraproj/puppet-evaluator v0.0.0-20190319215018-daa49117e01b/go.mod h1:EUN20EdlItpJBeaR7xVGBcOl463bGvW1sP/5exfODzw=
 github.com/lyraproj/puppet-evaluator v0.0.0-20190401140820-ba7b6d02006e h1:TqEn9SUz7YfumudH6XlPKFiKPCVT4IO6vK/bLvw1abY=

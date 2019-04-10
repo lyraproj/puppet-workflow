@@ -59,6 +59,8 @@ github.com/lyraproj/servicesdk v0.0.0-20190405110630-7e35406a94bd h1:Q09zC2++K1i
 github.com/lyraproj/servicesdk v0.0.0-20190405110630-7e35406a94bd/go.mod h1:w6s+eXq8Il80CKTGcTHni7LNo1C8EMjIl6Z6b51TEzw=
 github.com/lyraproj/servicesdk v0.0.0-20190408134916-985421696619 h1:6pst+J7dzj0Qm9jH0tgB5TF3lO3fREuqh1mDViwUcBs=
 github.com/lyraproj/servicesdk v0.0.0-20190408134916-985421696619/go.mod h1:JhBbVt9R8Br4wB7FbN2nctXoglv0aCIv2AM1sK0iwXc=
+github.com/lyraproj/servicesdk v0.0.0-20190410151500-46912f6caec3 h1:lS3dM4GG0R/ujXiKl9kk8LknlPw4E3CAXqsA5GrW06M=
+github.com/lyraproj/servicesdk v0.0.0-20190410151500-46912f6caec3/go.mod h1:JhBbVt9R8Br4wB7FbN2nctXoglv0aCIv2AM1sK0iwXc=
 github.com/mitchellh/go-testing-interface v0.0.0-20171004221916-a61a99592b77 h1:7GoSOOW2jpsfkntVKaS2rAr1TJqfcxotyaUcuxoZSzg=
 github.com/mitchellh/go-testing-interface v0.0.0-20171004221916-a61a99592b77/go.mod h1:kRemZodwjscx+RGhAo8eIhFbs2+BFgRtFPeD/KE+zxI=
 github.com/oklog/run v1.0.0 h1:Ru7dDtJNOyC66gQ5dQmaCa0qIsAUFY3sFpK1Xk8igrw=

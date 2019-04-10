@@ -5,6 +5,7 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/hashicorp/go-hclog"
 	"github.com/lyraproj/issue/issue"
 	"github.com/lyraproj/pcore/px"
 	"github.com/lyraproj/pcore/types"
@@ -174,8 +175,15 @@ func (a *activity) buildIterator(builder wf.IteratorBuilder) {
 		builder.Name(name.String())
 	}
 	builder.Style(wf.NewIterationStyle(style.String()))
-	builder.Over(a.extractParameters(builder.Context(), iteratorDef, `over`, false)...)
-	builder.Variables(a.extractParameters(builder.Context(), iteratorDef, `vars`, false)...)
+
+	over, inputs := a.extractOver(builder.Context(), iteratorDef, []px.Parameter{})
+	builder.Over(over)
+	builder.Input(inputs...)
+	vars := a.extractParameters(builder.Context(), iteratorDef, `variable`, false)
+	if len(vars) == 0 {
+		vars = a.extractParameters(builder.Context(), iteratorDef, `variables`, false)
+	}
+	builder.Variables(vars...)
 
 	switch a.activityKind() {
 	case kindWorkflow:
@@ -190,6 +198,18 @@ func (a *activity) getWhen() string {
 		return when
 	}
 	return ``
+}
+
+func (a *activity) extractOver(c px.Context, props px.OrderedMap, input []px.Parameter) (px.Value, []px.Parameter) {
+	if props == nil {
+		return px.Undef, input
+	}
+
+	v, ok := props.Get4(`over`)
+	if !ok {
+		return px.Undef, input
+	}
+	return a.resolveInputs(v, types.DefaultAnyType(), input)
 }
 
 func (a *activity) extractParameters(c px.Context, props px.OrderedMap, field string, isOutput bool) []px.Parameter {
@@ -324,12 +344,41 @@ func (a *activity) makeOutputParameter(c px.Context, field string, k, v px.Value
 	return
 }
 
+func getAttributeType(tp px.TypeWithCallableMembers, name string) (px.Type, bool) {
+	names := strings.Split(name, `.`)
+	for i, n := range names {
+		t := tp.(px.Type)
+		m, ok := tp.Member(n)
+		if !ok {
+			hclog.Default().Debug(`no such attribute`, `type`, t.Name(), `name`, n)
+			break
+		}
+		var a px.Attribute
+		a, ok = m.(px.Attribute)
+		if !ok {
+			hclog.Default().Debug(`not an attribute`, `type`, t.Name(), `name`, n)
+			break
+		}
+		at := a.Type()
+		if i+1 == len(names) {
+			return at, true
+		}
+		if ot, ok := at.(*types.OptionalType); ok {
+			at = ot.ContainedType()
+		}
+		tp, ok = at.(px.ObjectType)
+		if !ok {
+			hclog.Default().Debug(`not an Object attribute`, `type`, t.Name(), `name`, n, `actual`, at.Name())
+			break
+		}
+	}
+	return nil, false
+}
+
 func (a *activity) attributeType(c px.Context, name string) px.Type {
 	tp := a.getResourceType(c)
-	if m, ok := tp.Member(name); ok {
-		if a, ok := m.(px.Attribute); ok {
-			return a.Type()
-		}
+	if at, ok := getAttributeType(tp, name); ok {
+		return at
 	}
 	panic(px.Error(px.AttributeNotFound, issue.H{`type`: tp, `name`: name}))
 }
@@ -399,8 +448,8 @@ func (a *activity) resolveInputs(v px.Value, at px.Type, input []px.Parameter) (
 		nta := stripOptional(at)
 		if ot, ok := nta.(px.TypeWithCallableMembers); ok {
 			vr.EachPair(func(k, av px.Value) {
-				if m, ok := ot.Member(k.String()); ok {
-					av, input = a.resolveInputs(av, m.(px.AnnotatedMember).Type(), input)
+				if at, ok := getAttributeType(ot, k.String()); ok {
+					av, input = a.resolveInputs(av, at, input)
 				} else {
 					av, input = a.resolveInputs(av, types.DefaultAnyType(), input)
 				}

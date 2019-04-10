@@ -195,8 +195,12 @@ func (a *puppetActivity) buildIterator(builder wf.IteratorBuilder) {
 		builder.Name(name.String())
 	}
 	builder.Style(wf.NewIterationStyle(style.String()))
-	builder.Over(a.extractParameters(iteratorDef, `params`, noParamsFunc)...)
-	builder.Variables(a.extractParameters(iteratorDef, `vars`, noParamsFunc)...)
+	builder.Over(a.extractOver(iteratorDef))
+	vars := a.extractParameters(iteratorDef, `variable`, noParamsFunc)
+	if len(vars) == 0 {
+		vars = a.extractParameters(iteratorDef, `variables`, noParamsFunc)
+	}
+	builder.Variables(vars...)
 
 	switch a.Style() {
 	case `stateHandler`:
@@ -208,6 +212,13 @@ func (a *puppetActivity) buildIterator(builder wf.IteratorBuilder) {
 	case `action`:
 		builder.Action(a.buildAction)
 	}
+}
+
+func (a *puppetActivity) extractOver(props px.OrderedMap) px.Value {
+	if props == nil {
+		return px.Undef
+	}
+	return props.Get5(`over`, px.Undef)
 }
 
 func (a *puppetActivity) getAPI(c px.Context, input []px.Parameter) px.PuppetObject {

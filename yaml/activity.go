@@ -473,6 +473,9 @@ func (a *activity) getResourceType(c px.Context) px.ObjectType {
 		}
 		if s, ok := tv.(px.StringValue); ok {
 			n = s.String()
+			if !types.TypeNamePattern.MatchString(n) {
+				panic(px.Error(InvalidTypeName, issue.H{`name`: n}))
+			}
 		} else {
 			panic(px.Error(FieldTypeMismatch, issue.H{`activity`: a, `field`: `definition`, `expected`: `Variant[String,ObjectType]`, `actual`: tv}))
 		}
@@ -496,7 +499,10 @@ func (a *activity) getResourceType(c px.Context) px.ObjectType {
 
 func (a *activity) getTypespace() string {
 	if ts, ok := a.getStringProperty(a.hash, `typespace`); ok {
-		return ts
+		if types.TypeNamePattern.MatchString(ts) {
+			return ts
+		}
+		panic(px.Error(InvalidTypeName, issue.H{`name`: ts}))
 	}
 	if a.parent != nil {
 		return a.parent.getTypespace()

@@ -1,5 +1,5 @@
 workflow aws_example {
-  typespace => 'aws',
+  typespace => 'Aws',
   input => (
     Hash[String,String] $tags = lookup('aws.tags'),
   ),

@@ -1,5 +1,5 @@
 aws_vpc:
-  typespace: aws
+  typespace: Aws
   input:
     tags:
       type: Hash[String,String]

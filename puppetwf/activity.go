@@ -333,6 +333,9 @@ func (a *puppetActivity) getResourceType(c px.Context) px.ObjectType {
 			}
 			if s, ok := tv.(px.StringValue); ok {
 				n = s.String()
+				if !types.TypeNamePattern.MatchString(n) {
+					panic(px.Error(InvalidTypeName, issue.H{`name`: n}))
+				}
 			} else {
 				panic(px.Error(FieldTypeMismatch, issue.H{`field`: `definition`, `expected`: `Variant[String,ObjectType]`, `actual`: tv}))
 			}
@@ -355,6 +358,9 @@ func (a *puppetActivity) getResourceType(c px.Context) px.ObjectType {
 
 func (a *puppetActivity) getTypeSpace() string {
 	if ts, ok := a.getStringProperty(`typespace`); ok {
+		if !types.TypeNamePattern.MatchString(ts) {
+			panic(px.Error(InvalidTypeName, issue.H{`name`: ts}))
+		}
 		return ts
 	}
 	if a.parent != nil {

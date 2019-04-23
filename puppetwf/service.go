@@ -109,7 +109,13 @@ func munged(path string) string {
 			}
 		} else if c == '_' || c >= '0' && c <= '9' || c >= 'A' && c <= 'Z' || c >= 'a' && c <= 'z' {
 			if ps || pu {
-				c = unicode.ToUpper(c)
+				// First character of the name must be an upper case letter
+				if ps && (c == '_' || c >= '0' && c <= '9') {
+					// Must insert extra character
+					b.WriteRune('X')
+				} else {
+					c = unicode.ToUpper(c)
+				}
 			}
 			b.WriteRune(c)
 			ps = false

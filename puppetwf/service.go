@@ -39,8 +39,8 @@ func (m *manifestService) Metadata() (px.TypeSet, []serviceapi.Definition) {
 	return m.service.Metadata(m.ctx.Fork())
 }
 
-func (m *manifestService) State(name string, input px.OrderedMap) px.PuppetObject {
-	return m.service.State(m.ctx.Fork(), name, input)
+func (m *manifestService) State(name string, parameters px.OrderedMap) px.PuppetObject {
+	return m.service.State(m.ctx.Fork(), name, parameters)
 }
 
 func WithService(serviceName string, sf func(c pdsl.EvaluationContext, s serviceapi.Service)) {
@@ -77,7 +77,7 @@ func (m *manifestLoader) LoadManifest(moduleDir string, fileName string) service
 	if strings.HasSuffix(fileName, `.yaml`) {
 		// Assume YAML content instead of Puppet DSL
 		sb.RegisterStateConverter(yaml.ResolveState)
-		sb.RegisterActivity(yaml.CreateActivity(ec, fileName, content))
+		sb.RegisterStep(yaml.CreateStep(ec, fileName, content))
 	} else {
 		ast := ec.ParseAndValidate(fileName, string(content), false)
 		ec.AddDefinitions(ast)
@@ -85,8 +85,8 @@ func (m *manifestLoader) LoadManifest(moduleDir string, fileName string) service
 		sb.RegisterStateConverter(ResolveState)
 		for _, def := range ec.ResolveDefinitions() {
 			switch def := def.(type) {
-			case PuppetActivity:
-				sb.RegisterActivity(def.Activity())
+			case PuppetStep:
+				sb.RegisterStep(def.Step())
 			case px.Type:
 				sb.RegisterType(def)
 			}

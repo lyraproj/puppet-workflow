@@ -12,58 +12,58 @@ import (
 	"github.com/lyraproj/servicesdk/wf"
 )
 
-type PuppetActivity interface {
-	Activity() wf.Activity
+type PuppetStep interface {
+	Step() wf.Step
 
 	Name() string
 }
 
-type puppetActivity struct {
+type puppetStep struct {
 	name       string
-	parent     *puppetActivity
+	parent     *puppetStep
 	expression parser.Expression
 	properties px.OrderedMap
-	activity   wf.Activity
+	step       wf.Step
 }
 
 func init() {
-	evaluator.NewPuppetActivity = func(c pdsl.EvaluationContext, expression *parser.ActivityExpression) evaluator.Resolvable {
-		return newActivity(c, nil, expression)
+	evaluator.NewPuppetStep = func(c pdsl.EvaluationContext, expression *parser.StepExpression) evaluator.Resolvable {
+		return newStep(c, nil, expression)
 	}
 }
 
-func (a *puppetActivity) Activity() wf.Activity {
-	return a.activity
+func (a *puppetStep) Step() wf.Step {
+	return a.step
 }
 
-func (a *puppetActivity) Name() string {
+func (a *puppetStep) Name() string {
 	return a.name
 }
 
-func (a *puppetActivity) Resolve(c px.Context) {
-	if a.activity == nil {
+func (a *puppetStep) Resolve(c px.Context) {
+	if a.step == nil {
 		switch a.Style() {
 		case `stateHandler`:
-			a.activity = wf.NewStateHandler(c, a.buildStateHandler)
+			a.step = wf.NewStateHandler(c, a.buildStateHandler)
 		case `workflow`:
-			a.activity = wf.NewWorkflow(c, a.buildWorkflow)
+			a.step = wf.NewWorkflow(c, a.buildWorkflow)
 		case `resource`:
-			a.activity = wf.NewResource(c, a.buildResource)
+			a.step = wf.NewResource(c, a.buildResource)
 		case `action`:
-			a.activity = wf.NewAction(c, a.buildAction)
+			a.step = wf.NewAction(c, a.buildAction)
 		}
 	}
 }
 
-func (a *puppetActivity) buildActivity(builder wf.Builder) {
+func (a *puppetStep) buildStep(builder wf.Builder) {
 	builder.Name(a.Name())
 	builder.When(a.getWhen())
-	builder.Input(a.extractParameters(a.properties, `input`, a.inferInput)...)
-	builder.Output(a.extractParameters(a.properties, `output`, func() []px.Parameter { return []px.Parameter{} })...)
+	builder.Parameters(a.extractParameters(a.properties, `parameters`, a.inferParameters)...)
+	builder.Returns(a.extractParameters(a.properties, `returns`, func() []px.Parameter { return []px.Parameter{} })...)
 }
 
-func newActivity(c pdsl.EvaluationContext, parent *puppetActivity, ex *parser.ActivityExpression) *puppetActivity {
-	ca := &puppetActivity{parent: parent, expression: ex}
+func newStep(c pdsl.EvaluationContext, parent *puppetStep, ex *parser.StepExpression) *puppetStep {
+	ca := &puppetStep{parent: parent, expression: ex}
 	if props := ex.Properties(); props != nil {
 		v := pdsl.Evaluate(c, props)
 		dh, ok := v.(*types.Hash)
@@ -79,13 +79,13 @@ func newActivity(c pdsl.EvaluationContext, parent *puppetActivity, ex *parser.Ac
 	return ca
 }
 
-func (a *puppetActivity) buildStateHandler(builder wf.StateHandlerBuilder) {
-	a.buildActivity(builder)
-	builder.API(a.getAPI(builder.Context(), builder.GetInput()))
+func (a *puppetStep) buildStateHandler(builder wf.StateHandlerBuilder) {
+	a.buildStep(builder)
+	builder.API(a.getAPI(builder.Context(), builder.GetParameters()))
 }
 
-func (a *puppetActivity) buildResource(builder wf.ResourceBuilder) {
-	a.buildActivity(builder)
+func (a *puppetStep) buildResource(builder wf.ResourceBuilder) {
+	a.buildStep(builder)
 	c := builder.Context().(pdsl.EvaluationContext)
 	builder.State(&state{ctx: c, stateType: a.getResourceType(c), unresolvedState: a.getState(c)})
 	if extId, ok := a.getStringProperty(`externalId`); ok {
@@ -93,12 +93,12 @@ func (a *puppetActivity) buildResource(builder wf.ResourceBuilder) {
 	}
 }
 
-func (a *puppetActivity) buildAction(builder wf.ActionBuilder) {
+func (a *puppetStep) buildAction(builder wf.ActionBuilder) {
 	if fd, ok := a.expression.(*parser.FunctionDefinition); ok {
 		fn := evaluator.NewPuppetFunction(fd)
 		fn.Resolve(builder.Context())
 		builder.Name(fn.Name())
-		builder.Input(fn.Parameters()...)
+		builder.Parameters(fn.Parameters()...)
 		builder.Doer(&do{name: fn.Name(), body: fd.Body(), parameters: fn.Parameters()})
 		s := fn.Signature()
 		rt := s.ReturnType()
@@ -109,20 +109,20 @@ func (a *puppetActivity) buildAction(builder wf.ActionBuilder) {
 				for i, e := range es {
 					ps[i] = px.NewParameter(e.Name(), e.Value(), nil, false)
 				}
-				builder.Output(ps...)
+				builder.Returns(ps...)
 			}
 		}
 		return
 	}
-	if ae, ok := a.expression.(*parser.ActivityExpression); ok {
-		a.buildActivity(builder)
-		builder.Doer(&do{name: builder.GetName(), body: ae.Definition(), parameters: builder.GetInput()})
+	if ae, ok := a.expression.(*parser.StepExpression); ok {
+		a.buildStep(builder)
+		builder.Doer(&do{name: builder.GetName(), body: ae.Definition(), parameters: builder.GetParameters()})
 	}
 }
 
-func (a *puppetActivity) buildWorkflow(builder wf.WorkflowBuilder) {
-	a.buildActivity(builder)
-	de := a.expression.(*parser.ActivityExpression).Definition()
+func (a *puppetStep) buildWorkflow(builder wf.WorkflowBuilder) {
+	a.buildStep(builder)
+	de := a.expression.(*parser.StepExpression).Definition()
 	if de == nil {
 		return
 	}
@@ -132,45 +132,45 @@ func (a *puppetActivity) buildWorkflow(builder wf.WorkflowBuilder) {
 		panic(px.Error(FieldTypeMismatch, issue.H{`field`: `definition`, `expected`: `CodeBlock`, `actual`: de}))
 	}
 
-	// Block should only contain activity expressions or something is wrong.
+	// Block should only contain step expressions or something is wrong.
 	for _, stmt := range block.Statements() {
-		if as, ok := stmt.(*parser.ActivityExpression); ok {
-			a.workflowActivity(builder, as)
+		if as, ok := stmt.(*parser.StepExpression); ok {
+			a.workflowStep(builder, as)
 		} else if fn, ok := stmt.(*parser.FunctionDefinition); ok {
-			ac := &puppetActivity{parent: a, expression: fn}
+			ac := &puppetStep{parent: a, expression: fn}
 			builder.Action(ac.buildAction)
 		} else {
-			panic(px.Error(NotActivity, issue.H{`actual`: stmt}))
+			panic(px.Error(NotStep, issue.H{`actual`: stmt}))
 		}
 	}
 }
 
-func (a *puppetActivity) workflowActivity(builder wf.WorkflowBuilder, as *parser.ActivityExpression) {
-	ac := newActivity(builder.Context().(pdsl.EvaluationContext), a, as)
+func (a *puppetStep) workflowStep(builder wf.WorkflowBuilder, as *parser.StepExpression) {
+	ac := newStep(builder.Context().(pdsl.EvaluationContext), a, as)
 	if _, ok := ac.properties.Get4(`iteration`); ok {
 		builder.Iterator(ac.buildIterator)
 	} else {
 		switch as.Style() {
-		case parser.ActivityStyleStateHandler:
+		case parser.StepStyleStateHandler:
 			builder.StateHandler(ac.buildStateHandler)
-		case parser.ActivityStyleWorkflow:
+		case parser.StepStyleWorkflow:
 			builder.Workflow(ac.buildWorkflow)
-		case parser.ActivityStyleResource:
+		case parser.StepStyleResource:
 			builder.Resource(ac.buildResource)
-		case parser.ActivityStyleAction:
+		case parser.StepStyleAction:
 			builder.Action(ac.buildAction)
 		}
 	}
 }
 
-func (a *puppetActivity) Style() string {
+func (a *puppetStep) Style() string {
 	if _, ok := a.expression.(*parser.FunctionDefinition); ok {
 		return `action`
 	}
-	return string(a.expression.(*parser.ActivityExpression).Style())
+	return string(a.expression.(*parser.StepExpression).Style())
 }
 
-func (a *puppetActivity) inferInput() []px.Parameter {
+func (a *puppetStep) inferParameters() []px.Parameter {
 	// TODO:
 	return []px.Parameter{}
 }
@@ -179,7 +179,7 @@ func noParamsFunc() []px.Parameter {
 	return []px.Parameter{}
 }
 
-func (a *puppetActivity) buildIterator(builder wf.IteratorBuilder) {
+func (a *puppetStep) buildIterator(builder wf.IteratorBuilder) {
 	v, _ := a.properties.Get4(`iteration`)
 	iteratorDef, ok := v.(*types.Hash)
 	if !ok {
@@ -214,20 +214,20 @@ func (a *puppetActivity) buildIterator(builder wf.IteratorBuilder) {
 	}
 }
 
-func (a *puppetActivity) extractOver(props px.OrderedMap) px.Value {
+func (a *puppetStep) extractOver(props px.OrderedMap) px.Value {
 	if props == nil {
 		return px.Undef
 	}
 	return props.Get5(`over`, px.Undef)
 }
 
-func (a *puppetActivity) getAPI(c px.Context, input []px.Parameter) px.PuppetObject {
+func (a *puppetStep) getAPI(c px.Context, parameters []px.Parameter) px.PuppetObject {
 	var de parser.Expression
-	if ae, ok := a.expression.(*parser.ActivityExpression); ok {
+	if ae, ok := a.expression.(*parser.StepExpression); ok {
 		de = ae.Definition()
 	} else {
 		// The block is the function
-		return NewDo(a.Name(), input, a.expression)
+		return NewDo(a.Name(), parameters, a.expression)
 	}
 	if de == nil {
 		panic(c.Error(a.expression, NoDefinition, issue.NoArgs))
@@ -285,14 +285,14 @@ func createFunction(c px.Context, fd *parser.FunctionDefinition) evaluator.Puppe
 	return f
 }
 
-func (a *puppetActivity) getWhen() string {
+func (a *puppetStep) getWhen() string {
 	if when, ok := a.getStringProperty(`when`); ok {
 		return when
 	}
 	return ``
 }
 
-func (a *puppetActivity) extractParameters(props px.OrderedMap, field string, dflt func() []px.Parameter) []px.Parameter {
+func (a *puppetStep) extractParameters(props px.OrderedMap, field string, dflt func() []px.Parameter) []px.Parameter {
 	if props == nil {
 		return dflt()
 	}
@@ -318,8 +318,8 @@ func (a *puppetActivity) extractParameters(props px.OrderedMap, field string, df
 	return params
 }
 
-func (a *puppetActivity) getState(c pdsl.EvaluationContext) px.OrderedMap {
-	ae, ok := a.expression.(*parser.ActivityExpression)
+func (a *puppetStep) getState(c pdsl.EvaluationContext) px.OrderedMap {
+	ae, ok := a.expression.(*parser.StepExpression)
 	if !ok {
 		return px.EmptyMap
 	}
@@ -335,7 +335,7 @@ func (a *puppetActivity) getState(c pdsl.EvaluationContext) px.OrderedMap {
 	panic(px.Error(FieldTypeMismatch, issue.H{`field`: `definition`, `expected`: `Hash`, `actual`: de}))
 }
 
-func (a *puppetActivity) getResourceType(c px.Context) px.ObjectType {
+func (a *puppetStep) getResourceType(c px.Context) px.ObjectType {
 	n := a.Name()
 	if a.properties != nil {
 		if tv, ok := a.properties.Get4(`type`); ok {
@@ -367,7 +367,7 @@ func (a *puppetActivity) getResourceType(c px.Context) px.ObjectType {
 	panic(px.Error(px.UnresolvedType, issue.H{`typeString`: tn.Name()}))
 }
 
-func (a *puppetActivity) getTypeSpace() string {
+func (a *puppetStep) getTypeSpace() string {
 	if ts, ok := a.getStringProperty(`typespace`); ok {
 		if !types.TypeNamePattern.MatchString(ts) {
 			panic(px.Error(InvalidTypeName, issue.H{`name`: ts}))
@@ -380,7 +380,7 @@ func (a *puppetActivity) getTypeSpace() string {
 	return ``
 }
 
-func (a *puppetActivity) getStringProperty(field string) (string, bool) {
+func (a *puppetStep) getStringProperty(field string) (string, bool) {
 	if a.properties == nil {
 		return ``, false
 	}

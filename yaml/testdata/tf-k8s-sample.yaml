@@ -1,10 +1,10 @@
 k8s_namespace:
   typespace: Kubernetes
-  output:
+  returns:
     namespace_id: String
-  activities:
+  steps:
     namespace:
-      output: namespace_id
+      returns: namespace_id
       state:
         namespace_id: "ignore"
         metadata:

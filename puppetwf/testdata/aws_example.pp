@@ -1,16 +1,16 @@
 workflow aws_example {
   typespace => 'Aws',
-  input => (
+  parameters => (
     Hash[String,String] $tags = lookup('aws.tags'),
   ),
-  output => (
+  returns => (
     String $vpcId,
     String $subnetId,
   )
 } {
   resource vpc {
-    input  => ($tags),
-    output => ($vpcId)
+    parameters  => ($tags),
+    returns => ($vpcId)
   }{
     amazonProvidedIpv6CidrBlock => false,
     cidrBlock => '192.168.0.0/16',
@@ -21,8 +21,8 @@ workflow aws_example {
     tags => $tags,
   }
   resource subnet {
-    input  => ($tags, $vpcId),
-    output => ($subnetId)
+    parameters  => ($tags, $vpcId),
+    returns => ($subnetId)
   }{
     vpcId => $vpcId,
     cidrBlock => '192.168.1.0/24',

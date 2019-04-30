@@ -21,10 +21,10 @@ func (r *state) State() interface{} {
 	return r.unresolvedState
 }
 
-func ResolveState(ctx px.Context, state wf.State, input px.OrderedMap) px.PuppetObject {
+func ResolveState(ctx px.Context, state wf.State, parameters px.OrderedMap) px.PuppetObject {
 	scope := ctx.Scope().(pdsl.Scope)
 	return scope.WithLocalScope(func() (v px.Value) {
-		input.EachPair(func(k, v px.Value) {
+		parameters.EachPair(func(k, v px.Value) {
 			scope.Set(k.String(), v)
 		})
 		st := types.ResolveDeferred(ctx, state.State().(px.OrderedMap), scope).(px.OrderedMap)

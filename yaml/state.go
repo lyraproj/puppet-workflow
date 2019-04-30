@@ -20,7 +20,7 @@ func (r *state) State() interface{} {
 	return r.unresolvedState
 }
 
-func ResolveState(ctx px.Context, state wf.State, input px.OrderedMap) px.PuppetObject {
-	resolvedState := types.ResolveDeferred(ctx, state.State().(px.OrderedMap), input).(px.OrderedMap)
+func ResolveState(ctx px.Context, state wf.State, parameters px.OrderedMap) px.PuppetObject {
+	resolvedState := types.ResolveDeferred(ctx, state.State().(px.OrderedMap), parameters).(px.OrderedMap)
 	return px.New(ctx, state.Type(), resolvedState).(px.PuppetObject)
 }

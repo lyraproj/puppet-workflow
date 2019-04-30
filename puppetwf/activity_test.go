@@ -62,7 +62,7 @@ func withSampleLocalService(sf func(pdsl.EvaluationContext, serviceapi.Service))
 }
 */
 
-func TestActivity(t *testing.T) {
+func TestStep(t *testing.T) {
 	withSampleService(func(ctx pdsl.EvaluationContext, s serviceapi.Service) {
 		s.Metadata(ctx)
 		rs := s.Invoke(ctx, puppetwf.ManifestLoaderID, "loadManifest", types.WrapString("testdata"), types.WrapString("testdata/aws_example.pp")).(serviceapi.Definition)
@@ -87,7 +87,7 @@ func TestActivity(t *testing.T) {
     'name' => 'Testdata::Aws_examplePp'
   ),
   'properties' => {
-    'input' => [
+    'parameters' => [
       Parameter(
         'name' => 'tags',
         'type' => Hash[String, String],
@@ -96,7 +96,7 @@ func TestActivity(t *testing.T) {
           'arguments' => ['aws.tags']
         )
       )],
-    'output' => [
+    'returns' => [
       Parameter(
         'name' => 'vpcId',
         'type' => String
@@ -105,7 +105,7 @@ func TestActivity(t *testing.T) {
         'name' => 'subnetId',
         'type' => String
       )],
-    'activities' => [
+    'steps' => [
       Service::Definition(
         'identifier' => TypedName(
           'namespace' => 'definition',
@@ -116,12 +116,12 @@ func TestActivity(t *testing.T) {
           'name' => 'Testdata::Aws_examplePp'
         ),
         'properties' => {
-          'input' => [
+          'parameters' => [
             Parameter(
               'name' => 'tags',
               'type' => Any
             )],
-          'output' => [
+          'returns' => [
             Parameter(
               'name' => 'vpcId',
               'type' => Any
@@ -140,7 +140,7 @@ func TestActivity(t *testing.T) {
           'name' => 'Testdata::Aws_examplePp'
         ),
         'properties' => {
-          'input' => [
+          'parameters' => [
             Parameter(
               'name' => 'tags',
               'type' => Any
@@ -149,7 +149,7 @@ func TestActivity(t *testing.T) {
               'name' => 'vpcId',
               'type' => Any
             )],
-          'output' => [
+          'returns' => [
             Parameter(
               'name' => 'subnetId',
               'type' => Any

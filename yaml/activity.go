@@ -13,18 +13,18 @@ import (
 	"github.com/lyraproj/servicesdk/wf"
 )
 
-type activity struct {
-	name     string
-	parent   *activity
-	hash     px.OrderedMap
-	rt       px.ObjectType
-	activity wf.Activity
+type step struct {
+	name   string
+	parent *step
+	hash   px.OrderedMap
+	rt     px.ObjectType
+	step   wf.Step
 }
 
 const kindWorkflow = 1
 const kindResource = 2
 
-func CreateActivity(c px.Context, file string, content []byte) wf.Activity {
+func CreateStep(c px.Context, file string, content []byte) wf.Step {
 	c.StackPush(issue.NewLocation(file, 0, 0))
 	defer c.StackPop()
 
@@ -45,11 +45,11 @@ func CreateActivity(c px.Context, file string, content []byte) wf.Activity {
 		}
 	})
 	if name == `` || def == nil {
-		panic(px.Error(NotActivity, issue.NoArgs))
+		panic(px.Error(NotStep, issue.NoArgs))
 	}
 
-	a := newActivity(name, nil, def)
-	switch a.activityKind() {
+	a := newStep(name, nil, def)
+	switch a.stepKind() {
 	case kindWorkflow:
 		return wf.NewWorkflow(c, func(wb wf.WorkflowBuilder) {
 			a.buildWorkflow(wb)
@@ -61,52 +61,52 @@ func CreateActivity(c px.Context, file string, content []byte) wf.Activity {
 	}
 }
 
-func newActivity(name string, parent *activity, ex px.OrderedMap) *activity {
-	ca := &activity{parent: parent, hash: ex}
+func newStep(name string, parent *step, ex px.OrderedMap) *step {
+	ca := &step{parent: parent, hash: ex}
 	sgs := strings.Split(name, `::`)
 	ca.name = sgs[len(sgs)-1]
 	return ca
 }
 
-func (a *activity) activityKind() int {
+func (a *step) stepKind() int {
 	m := a.hash
-	if m.IncludesKey2(`activities`) {
+	if m.IncludesKey2(`steps`) {
 		return kindWorkflow
 	}
 	if m.IncludesKey2(`state`) {
 		return kindResource
 	}
-	panic(px.Error(NotActivity, issue.NoArgs))
+	panic(px.Error(NotStep, issue.NoArgs))
 }
 
-func (a *activity) Activity() wf.Activity {
-	return a.activity
+func (a *step) Step() wf.Step {
+	return a.step
 }
 
-func (a *activity) Name() string {
+func (a *step) Name() string {
 	return a.name
 }
 
-func (a *activity) Label() string {
+func (a *step) Label() string {
 	return a.Style() + " " + a.Name()
 }
 
-func (a *activity) buildActivity(builder wf.Builder) {
+func (a *step) buildStep(builder wf.Builder) {
 	builder.Name(a.Name())
 	builder.When(a.getWhen())
-	builder.Input(a.extractParameters(builder.Context(), a.hash, `input`, false)...)
-	builder.Output(a.extractParameters(builder.Context(), a.hash, `output`, true)...)
+	builder.Parameters(a.extractParameters(builder.Context(), a.hash, `parameters`, false)...)
+	builder.Returns(a.extractParameters(builder.Context(), a.hash, `returns`, true)...)
 }
 
-func (a *activity) buildResource(builder wf.ResourceBuilder) {
+func (a *step) buildResource(builder wf.ResourceBuilder) {
 	c := builder.Context()
 
 	builder.Name(a.Name())
 	builder.When(a.getWhen())
 
-	st, input := a.getState(c, a.extractParameters(builder.Context(), a.hash, `input`, false))
-	builder.Input(input...)
-	builder.Output(a.extractParameters(builder.Context(), a.hash, `output`, true)...)
+	st, parameters := a.getState(c, a.extractParameters(builder.Context(), a.hash, `parameters`, false))
+	builder.Parameters(parameters...)
+	builder.Returns(a.extractParameters(builder.Context(), a.hash, `returns`, true)...)
 	builder.State(&state{ctx: c, stateType: a.getResourceType(c), unresolvedState: st})
 
 	if extId, ok := a.getStringProperty(a.hash, `external_id`); ok {
@@ -114,34 +114,34 @@ func (a *activity) buildResource(builder wf.ResourceBuilder) {
 	}
 }
 
-func (a *activity) buildWorkflow(builder wf.WorkflowBuilder) {
-	a.buildActivity(builder)
-	de, ok := a.hash.Get4(`activities`)
+func (a *step) buildWorkflow(builder wf.WorkflowBuilder) {
+	a.buildStep(builder)
+	de, ok := a.hash.Get4(`steps`)
 	if !ok {
 		return
 	}
 
 	block, ok := de.(px.OrderedMap)
 	if !ok {
-		panic(px.Error(FieldTypeMismatch, issue.H{`activity`: a, `field`: `definition`, `expected`: `CodeBlock`, `actual`: de}))
+		panic(px.Error(FieldTypeMismatch, issue.H{`step`: a, `field`: `definition`, `expected`: `CodeBlock`, `actual`: de}))
 	}
 
-	// Block should only contain activity expressions or something is wrong.
+	// Block should only contain step expressions or something is wrong.
 	block.EachPair(func(k, v px.Value) {
 		if as, ok := v.(px.OrderedMap); ok {
-			a.workflowActivity(builder, k.String(), as)
+			a.workflowStep(builder, k.String(), as)
 		} else {
-			panic(px.Error(NotActivity, issue.H{`actual`: as}))
+			panic(px.Error(NotStep, issue.H{`actual`: as}))
 		}
 	})
 }
 
-func (a *activity) workflowActivity(builder wf.WorkflowBuilder, name string, as px.OrderedMap) {
-	ac := newActivity(name, a, as)
+func (a *step) workflowStep(builder wf.WorkflowBuilder, name string, as px.OrderedMap) {
+	ac := newStep(name, a, as)
 	if _, ok := ac.hash.Get4(`iteration`); ok {
 		builder.Iterator(ac.buildIterator)
 	} else {
-		switch ac.activityKind() {
+		switch ac.stepKind() {
 		case kindWorkflow:
 			builder.Workflow(ac.buildWorkflow)
 		default:
@@ -150,8 +150,8 @@ func (a *activity) workflowActivity(builder wf.WorkflowBuilder, name string, as 
 	}
 }
 
-func (a *activity) Style() string {
-	switch a.activityKind() {
+func (a *step) Style() string {
+	switch a.stepKind() {
 	case kindWorkflow:
 		return `workflow`
 	default:
@@ -159,33 +159,33 @@ func (a *activity) Style() string {
 	}
 }
 
-func (a *activity) buildIterator(builder wf.IteratorBuilder) {
+func (a *step) buildIterator(builder wf.IteratorBuilder) {
 	v, _ := a.hash.Get4(`iteration`)
 	iteratorDef, ok := v.(*types.Hash)
 	if !ok {
-		panic(px.Error(FieldTypeMismatch, issue.H{`activity`: a, `field`: `iteration`, `expected`: `Hash`, `actual`: v.PType()}))
+		panic(px.Error(FieldTypeMismatch, issue.H{`step`: a, `field`: `iteration`, `expected`: `Hash`, `actual`: v.PType()}))
 	}
 
 	v = iteratorDef.Get5(`function`, px.Undef)
 	style, ok := v.(px.StringValue)
 	if !ok {
-		panic(px.Error(FieldTypeMismatch, issue.H{`activity`: a, `field`: `iteration.style`, `expected`: `String`, `actual`: v}))
+		panic(px.Error(FieldTypeMismatch, issue.H{`step`: a, `field`: `iteration.style`, `expected`: `String`, `actual`: v}))
 	}
 	if name, ok := iteratorDef.Get4(`name`); ok {
 		builder.Name(name.String())
 	}
 	builder.Style(wf.NewIterationStyle(style.String()))
 
-	over, inputs := a.extractOver(builder.Context(), iteratorDef, []px.Parameter{})
+	over, parameters := a.extractOver(builder.Context(), iteratorDef, []px.Parameter{})
 	builder.Over(over)
-	builder.Input(inputs...)
+	builder.Parameters(parameters...)
 	vars := a.extractParameters(builder.Context(), iteratorDef, `variable`, false)
 	if len(vars) == 0 {
 		vars = a.extractParameters(builder.Context(), iteratorDef, `variables`, false)
 	}
 	builder.Variables(vars...)
 
-	switch a.activityKind() {
+	switch a.stepKind() {
 	case kindWorkflow:
 		builder.Workflow(a.buildWorkflow)
 	default:
@@ -193,26 +193,26 @@ func (a *activity) buildIterator(builder wf.IteratorBuilder) {
 	}
 }
 
-func (a *activity) getWhen() string {
+func (a *step) getWhen() string {
 	if when, ok := a.getStringProperty(a.hash, `when`); ok {
 		return when
 	}
 	return ``
 }
 
-func (a *activity) extractOver(c px.Context, props px.OrderedMap, input []px.Parameter) (px.Value, []px.Parameter) {
+func (a *step) extractOver(c px.Context, props px.OrderedMap, parameters []px.Parameter) (px.Value, []px.Parameter) {
 	if props == nil {
-		return px.Undef, input
+		return px.Undef, parameters
 	}
 
 	v, ok := props.Get4(`over`)
 	if !ok {
-		return px.Undef, input
+		return px.Undef, parameters
 	}
-	return a.resolveInputs(v, types.DefaultAnyType(), input)
+	return a.resolveParameters(v, types.DefaultAnyType(), parameters)
 }
 
-func (a *activity) extractParameters(c px.Context, props px.OrderedMap, field string, isOutput bool) []px.Parameter {
+func (a *step) extractParameters(c px.Context, props px.OrderedMap, field string, isReturns bool) []px.Parameter {
 	if props == nil {
 		return []px.Parameter{}
 	}
@@ -226,10 +226,10 @@ func (a *activity) extractParameters(c px.Context, props px.OrderedMap, field st
 		params := make([]px.Parameter, 0, ph.Len())
 		ph.EachPair(func(k, v px.Value) {
 			var p px.Parameter
-			if isOutput {
-				p = a.makeOutputParameter(c, field, k, v)
+			if isReturns {
+				p = a.makeReturnsParameter(c, field, k, v)
 			} else {
-				p = a.makeInputParameter(c, field, k, v)
+				p = a.makeParametersParameter(c, field, k, v)
 			}
 			params = append(params, p)
 		})
@@ -247,22 +247,22 @@ func (a *activity) extractParameters(c px.Context, props px.OrderedMap, field st
 		pa.EachWithIndex(func(e px.Value, i int) {
 			if ne, ok := e.(px.StringValue); ok {
 				n := ne.String()
-				if isOutput && a.activityKind() == kindResource {
+				if isReturns && a.stepKind() == kindResource {
 					// Names must match attribute names
 					params[i] = px.NewParameter(n, a.attributeType(c, n), nil, false)
 				} else {
 					params[i] = px.NewParameter(n, types.DefaultAnyType(), nil, false)
 				}
 			} else {
-				panic(px.Error(BadParameter, issue.H{`activity`: a, `name`: e, `parameterType`: field}))
+				panic(px.Error(BadParameter, issue.H{`step`: a, `name`: e, `parameterType`: field}))
 			}
 		})
 		return params
 	}
-	panic(px.Error(FieldTypeMismatch, issue.H{`activity`: a, `field`: field, `expected`: `Hash`, `actual`: v.PType()}))
+	panic(px.Error(FieldTypeMismatch, issue.H{`step`: a, `field`: field, `expected`: `Hash`, `actual`: v.PType()}))
 }
 
-func (a *activity) makeInputParameter(c px.Context, field string, k, v px.Value) (param px.Parameter) {
+func (a *step) makeParametersParameter(c px.Context, field string, k, v px.Value) (param px.Parameter) {
 	if n, ok := k.(px.StringValue); ok {
 		name := n.String()
 		switch v := v.(type) {
@@ -293,15 +293,15 @@ func (a *activity) makeInputParameter(c px.Context, field string, k, v px.Value)
 	}
 	if param == nil {
 		panic(px.Error(BadParameter, issue.H{
-			`activity`: a, `name`: k, `parameterType`: `input`}))
+			`step`: a, `name`: k, `parameterType`: `parameters`}))
 	}
 	return
 }
 
 var varNamePattern = regexp.MustCompile(`\A[a-z]\w*(?:\.[a-z]\w*)*\z`)
 
-func (a *activity) makeOutputParameter(c px.Context, field string, k, v px.Value) (param px.Parameter) {
-	// TODO: Iterator output etc.
+func (a *step) makeReturnsParameter(c px.Context, field string, k, v px.Value) (param px.Parameter) {
+	// TODO: Iterator returns etc.
 	if n, ok := k.(px.StringValue); ok {
 		name := n.String()
 		switch v := v.(type) {
@@ -310,17 +310,17 @@ func (a *activity) makeOutputParameter(c px.Context, field string, k, v px.Value
 		case px.StringValue:
 			s := v.String()
 			if len(s) > 0 && unicode.IsUpper(rune(s[0])) {
-				if a.activityKind() == kindWorkflow {
+				if a.stepKind() == kindWorkflow {
 					param = px.NewParameter(name, c.ParseType(s), nil, false)
 				}
 			} else if varNamePattern.MatchString(s) {
-				if a.activityKind() == kindResource {
+				if a.stepKind() == kindResource {
 					// Alias declaration
 					param = px.NewParameter(name, a.attributeType(c, s), v, false)
 				}
 			}
 		case px.List:
-			if a.activityKind() == kindResource {
+			if a.stepKind() == kindResource {
 				ts := make([]px.Type, 0, v.Len())
 				if v.All(func(e px.Value) bool {
 					if sv, ok := e.(px.StringValue); ok {
@@ -339,7 +339,7 @@ func (a *activity) makeOutputParameter(c px.Context, field string, k, v px.Value
 	}
 	if param == nil {
 		panic(px.Error(BadParameter, issue.H{
-			`activity`: a, `name`: k, `parameterType`: `output`}))
+			`step`: a, `name`: k, `parameterType`: `returns`}))
 	}
 	return
 }
@@ -375,7 +375,7 @@ func getAttributeType(tp px.TypeWithCallableMembers, name string) (px.Type, bool
 	return nil, false
 }
 
-func (a *activity) attributeType(c px.Context, name string) px.Type {
+func (a *step) attributeType(c px.Context, name string) px.Type {
 	tp := a.getResourceType(c)
 	if at, ok := getAttributeType(tp, name); ok {
 		return at
@@ -383,7 +383,7 @@ func (a *activity) attributeType(c px.Context, name string) px.Type {
 	panic(px.Error(px.AttributeNotFound, issue.H{`type`: tp, `name`: name}))
 }
 
-func (a *activity) getState(c px.Context, input []px.Parameter) (px.OrderedMap, []px.Parameter) {
+func (a *step) getState(c px.Context, parameters []px.Parameter) (px.OrderedMap, []px.Parameter) {
 	de, ok := a.hash.Get4(`state`)
 	if !ok {
 		return px.EmptyMap, []px.Parameter{}
@@ -398,17 +398,17 @@ func (a *activity) getState(c px.Context, input []px.Parameter) (px.OrderedMap, 
 				s := sv.String()
 				if varNamePattern.MatchString(s) {
 					at := a.attributeType(c, s)
-					v, input = a.resolveInputs(v, at, input)
+					v, parameters = a.resolveParameters(v, at, parameters)
 					es = append(es, types.WrapHashEntry(k, v))
 					return true
 				}
 			}
 			return false
 		}) {
-			return types.WrapHash(es), input
+			return types.WrapHash(es), parameters
 		}
 	}
-	panic(px.Error(FieldTypeMismatch, issue.H{`activity`: a, `field`: `definition`, `expected`: `Hash`, `actual`: de}))
+	panic(px.Error(FieldTypeMismatch, issue.H{`step`: a, `field`: `definition`, `expected`: `Hash`, `actual`: de}))
 }
 
 func stripOptional(t px.Type) px.Type {
@@ -418,27 +418,27 @@ func stripOptional(t px.Type) px.Type {
 	return t
 }
 
-func (a *activity) resolveInputs(v px.Value, at px.Type, input []px.Parameter) (px.Value, []px.Parameter) {
+func (a *step) resolveParameters(v px.Value, at px.Type, parameters []px.Parameter) (px.Value, []px.Parameter) {
 	switch vr := v.(type) {
 	case px.StringValue:
 		s := vr.String()
 		if len(s) > 1 && s[0] == '$' {
 			vn := s[1:]
 			if varNamePattern.MatchString(vn) {
-				// Add to input unless it's there already
+				// Add to parameters unless it's there already
 				found := false
-				for i, ip := range input {
+				for i, ip := range parameters {
 					if ip.Name() == vn {
 						if ip.Type() == types.DefaultAnyType() {
 							// Replace untyped with typed
-							input[i] = px.NewParameter(vn, at, nil, false)
+							parameters[i] = px.NewParameter(vn, at, nil, false)
 						}
 						found = true
 						break
 					}
 				}
 				if !found {
-					input = append(input, px.NewParameter(vn, at, nil, false))
+					parameters = append(parameters, px.NewParameter(vn, at, nil, false))
 				}
 				v = types.NewDeferred(s)
 			}
@@ -449,32 +449,32 @@ func (a *activity) resolveInputs(v px.Value, at px.Type, input []px.Parameter) (
 		if ot, ok := nta.(px.TypeWithCallableMembers); ok {
 			vr.EachPair(func(k, av px.Value) {
 				if at, ok := getAttributeType(ot, k.String()); ok {
-					av, input = a.resolveInputs(av, at, input)
+					av, parameters = a.resolveParameters(av, at, parameters)
 				} else {
-					av, input = a.resolveInputs(av, types.DefaultAnyType(), input)
+					av, parameters = a.resolveParameters(av, types.DefaultAnyType(), parameters)
 				}
 				es = append(es, types.WrapHashEntry(k, av))
 			})
 		} else if ht, ok := nta.(*types.HashType); ok {
 			et := ht.ValueType()
 			vr.EachPair(func(k, av px.Value) {
-				av, input = a.resolveInputs(av, et, input)
+				av, parameters = a.resolveParameters(av, et, parameters)
 				es = append(es, types.WrapHashEntry(k, av))
 			})
 		} else if st, ok := nta.(*types.StructType); ok {
 			hm := st.HashedMembers()
 			vr.EachPair(func(k, av px.Value) {
 				if m, ok := hm[k.String()]; ok {
-					av, input = a.resolveInputs(av, m.Value(), input)
+					av, parameters = a.resolveParameters(av, m.Value(), parameters)
 				} else {
-					av, input = a.resolveInputs(av, types.DefaultAnyType(), input)
+					av, parameters = a.resolveParameters(av, types.DefaultAnyType(), parameters)
 				}
 				es = append(es, types.WrapHashEntry(k, av))
 			})
 		} else {
 			et := types.DefaultAnyType()
 			vr.EachPair(func(k, av px.Value) {
-				av, input = a.resolveInputs(av, et, input)
+				av, parameters = a.resolveParameters(av, et, parameters)
 				es = append(es, types.WrapHashEntry(k, av))
 			})
 		}
@@ -485,32 +485,32 @@ func (a *activity) resolveInputs(v px.Value, at px.Type, input []px.Parameter) (
 		if st, ok := nta.(*types.ArrayType); ok {
 			et := st.ElementType()
 			vr.EachWithIndex(func(ev px.Value, i int) {
-				ev, input = a.resolveInputs(ev, et, input)
+				ev, parameters = a.resolveParameters(ev, et, parameters)
 				es[i] = ev
 			})
 		} else if tt, ok := nta.(*types.TupleType); ok {
 			ts := tt.Types()
 			vr.EachWithIndex(func(ev px.Value, i int) {
 				if i < len(ts) {
-					ev, input = a.resolveInputs(ev, ts[i], input)
+					ev, parameters = a.resolveParameters(ev, ts[i], parameters)
 				} else {
-					ev, input = a.resolveInputs(ev, types.DefaultAnyType(), input)
+					ev, parameters = a.resolveParameters(ev, types.DefaultAnyType(), parameters)
 				}
 				es[i] = ev
 			})
 		} else {
 			et := types.DefaultAnyType()
 			vr.EachWithIndex(func(ev px.Value, i int) {
-				ev, input = a.resolveInputs(ev, et, input)
+				ev, parameters = a.resolveParameters(ev, et, parameters)
 				es[i] = ev
 			})
 		}
 		v = types.WrapValues(es)
 	}
-	return v, input
+	return v, parameters
 }
 
-func (a *activity) getResourceType(c px.Context) px.ObjectType {
+func (a *step) getResourceType(c px.Context) px.ObjectType {
 	if a.rt != nil {
 		return a.rt
 	}
@@ -526,7 +526,7 @@ func (a *activity) getResourceType(c px.Context) px.ObjectType {
 				panic(px.Error(InvalidTypeName, issue.H{`name`: n}))
 			}
 		} else {
-			panic(px.Error(FieldTypeMismatch, issue.H{`activity`: a, `field`: `definition`, `expected`: `Variant[String,ObjectType]`, `actual`: tv}))
+			panic(px.Error(FieldTypeMismatch, issue.H{`step`: a, `field`: `definition`, `expected`: `Variant[String,ObjectType]`, `actual`: tv}))
 		}
 	} else {
 		ts := a.getTypespace()
@@ -541,12 +541,12 @@ func (a *activity) getResourceType(c px.Context) px.ObjectType {
 			a.rt = pt
 			return pt
 		}
-		panic(px.Error(FieldTypeMismatch, issue.H{`activity`: a, `field`: `definition`, `expected`: `ObjectType`, `actual`: t}))
+		panic(px.Error(FieldTypeMismatch, issue.H{`step`: a, `field`: `definition`, `expected`: `ObjectType`, `actual`: t}))
 	}
 	panic(px.Error(px.UnresolvedType, issue.H{`typeString`: tn.Name()}))
 }
 
-func (a *activity) getTypespace() string {
+func (a *step) getTypespace() string {
 	if ts, ok := a.getStringProperty(a.hash, `typespace`); ok {
 		if types.TypeNamePattern.MatchString(ts) {
 			return ts
@@ -559,7 +559,7 @@ func (a *activity) getTypespace() string {
 	return ``
 }
 
-func (a *activity) getStringProperty(properties px.OrderedMap, field string) (string, bool) {
+func (a *step) getStringProperty(properties px.OrderedMap, field string) (string, bool) {
 	v, ok := properties.Get4(field)
 	if !ok {
 		return ``, false
@@ -568,5 +568,5 @@ func (a *activity) getStringProperty(properties px.OrderedMap, field string) (st
 	if s, ok := v.(px.StringValue); ok {
 		return s.String(), true
 	}
-	panic(px.Error(FieldTypeMismatch, issue.H{`activity`: a, `field`: field, `expected`: `String`, `actual`: v.PType()}))
+	panic(px.Error(FieldTypeMismatch, issue.H{`step`: a, `field`: field, `expected`: `String`, `actual`: v.PType()}))
 }

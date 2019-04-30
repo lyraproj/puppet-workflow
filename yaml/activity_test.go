@@ -14,7 +14,7 @@ import (
 	"github.com/lyraproj/servicesdk/serviceapi"
 )
 
-func ExampleCreateActivity_nestedObject() {
+func ExampleCreateStep_nestedObject() {
 	puppet.Do(func(ctx pdsl.EvaluationContext) {
 		ctx.SetLoader(px.NewFileBasedLoader(ctx.Loader(), "../puppetwf/testdata", ``, px.PuppetDataTypePath))
 		workflowFile := "testdata/tf-k8s-sample.yaml"
@@ -22,16 +22,16 @@ func ExampleCreateActivity_nestedObject() {
 		if err != nil {
 			panic(err.Error())
 		}
-		a := yaml.CreateActivity(ctx, workflowFile, content)
+		a := yaml.CreateStep(ctx, workflowFile, content)
 
 		sb := service.NewServiceBuilder(ctx, `Yaml::Test`)
 		sb.RegisterStateConverter(yaml.ResolveState)
-		sb.RegisterActivity(a)
+		sb.RegisterStep(a)
 		sv := sb.Server()
 		_, defs := sv.Metadata(ctx)
 
 		wf := defs[0]
-		ac, _ := wf.Properties().Get4(`activities`)
+		ac, _ := wf.Properties().Get4(`steps`)
 		rs := ac.(px.List).At(0).(serviceapi.Definition)
 
 		st := sv.State(ctx, rs.Identifier().Name(), px.EmptyMap)
@@ -50,7 +50,7 @@ func ExampleCreateActivity_nestedObject() {
 	// )
 }
 
-func ExampleCreateActivity() {
+func ExampleCreateStep() {
 	pcore.Do(func(ctx px.Context) {
 		ctx.SetLoader(px.NewFileBasedLoader(ctx.Loader(), "../puppetwf/testdata", ``, px.PuppetDataTypePath))
 		workflowFile := "testdata/aws_vpc.yaml"
@@ -58,11 +58,11 @@ func ExampleCreateActivity() {
 		if err != nil {
 			panic(err.Error())
 		}
-		a := yaml.CreateActivity(ctx, workflowFile, content)
+		a := yaml.CreateStep(ctx, workflowFile, content)
 
 		sb := service.NewServiceBuilder(ctx, `Yaml::Test`)
 		sb.RegisterStateConverter(yaml.ResolveState)
-		sb.RegisterActivity(a)
+		sb.RegisterStep(a)
 		sv := sb.Server()
 		_, defs := sv.Metadata(ctx)
 
@@ -87,7 +87,7 @@ func ExampleCreateActivity() {
 	//     'name' => 'Yaml::Test'
 	//   ),
 	//   'properties' => {
-	//     'input' => [
+	//     'parameters' => [
 	//       Parameter(
 	//         'name' => 'tags',
 	//         'type' => Hash[String, String],
@@ -96,7 +96,7 @@ func ExampleCreateActivity() {
 	//           'arguments' => ['aws.tags']
 	//         )
 	//       )],
-	//     'output' => [
+	//     'returns' => [
 	//       Parameter(
 	//         'name' => 'vpcId',
 	//         'type' => String
@@ -105,7 +105,7 @@ func ExampleCreateActivity() {
 	//         'name' => 'subnetId',
 	//         'type' => String
 	//       )],
-	//     'activities' => [
+	//     'steps' => [
 	//       Service::Definition(
 	//         'identifier' => TypedName(
 	//           'namespace' => 'definition',
@@ -116,12 +116,12 @@ func ExampleCreateActivity() {
 	//           'name' => 'Yaml::Test'
 	//         ),
 	//         'properties' => {
-	//           'input' => [
+	//           'parameters' => [
 	//             Parameter(
 	//               'name' => 'tags',
 	//               'type' => Hash[String, String]
 	//             )],
-	//           'output' => [
+	//           'returns' => [
 	//             Parameter(
 	//               'name' => 'vpcId',
 	//               'type' => Optional[String]
@@ -140,7 +140,7 @@ func ExampleCreateActivity() {
 	//           'name' => 'Yaml::Test'
 	//         ),
 	//         'properties' => {
-	//           'input' => [
+	//           'parameters' => [
 	//             Parameter(
 	//               'name' => 'vpcId',
 	//               'type' => String
@@ -149,7 +149,7 @@ func ExampleCreateActivity() {
 	//               'name' => 'tags',
 	//               'type' => Hash[String, String]
 	//             )],
-	//           'output' => [
+	//           'returns' => [
 	//             Parameter(
 	//               'name' => 'subnetId',
 	//               'type' => Optional[String]

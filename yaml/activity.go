@@ -23,6 +23,7 @@ type step struct {
 
 const kindWorkflow = 1
 const kindResource = 2
+const kindCollect = 3
 
 func CreateStep(c px.Context, file string, content []byte) wf.Step {
 	c.StackPush(issue.NewLocation(file, 0, 0))
@@ -75,6 +76,9 @@ func (a *step) stepKind() int {
 	}
 	if m.IncludesKey2(`state`) {
 		return kindResource
+	}
+	if m.IncludesKey2(`each`) || m.IncludesKey2(`eachPair`) || m.IncludesKey2(`times`) || m.IncludesKey2(`range`) {
+		return kindCollect
 	}
 	panic(px.Error(NotStep, issue.NoArgs))
 }
@@ -136,17 +140,15 @@ func (a *step) buildWorkflow(builder wf.WorkflowBuilder) {
 	})
 }
 
-func (a *step) workflowStep(builder wf.WorkflowBuilder, name string, as px.OrderedMap) {
+func (a *step) workflowStep(builder wf.ChildBuilder, name string, as px.OrderedMap) {
 	ac := newStep(name, a, as)
-	if _, ok := ac.hash.Get4(`iteration`); ok {
+	switch ac.stepKind() {
+	case kindCollect:
 		builder.Iterator(ac.buildIterator)
-	} else {
-		switch ac.stepKind() {
-		case kindWorkflow:
-			builder.Workflow(ac.buildWorkflow)
-		default:
-			builder.Resource(ac.buildResource)
-		}
+	case kindWorkflow:
+		builder.Workflow(ac.buildWorkflow)
+	default:
+		builder.Resource(ac.buildResource)
 	}
 }
 
@@ -154,42 +156,46 @@ func (a *step) Style() string {
 	switch a.stepKind() {
 	case kindWorkflow:
 		return `workflow`
+	case kindCollect:
+		return `collect`
 	default:
 		return `resource`
 	}
 }
 
 func (a *step) buildIterator(builder wf.IteratorBuilder) {
-	v, _ := a.hash.Get4(`iteration`)
-	iteratorDef, ok := v.(*types.Hash)
-	if !ok {
-		panic(px.Error(FieldTypeMismatch, issue.H{`step`: a, `field`: `iteration`, `expected`: `Hash`, `actual`: v.PType()}))
-	}
+	a.buildStep(builder)
 
-	v = iteratorDef.Get5(`function`, px.Undef)
-	style, ok := v.(px.StringValue)
-	if !ok {
-		panic(px.Error(FieldTypeMismatch, issue.H{`step`: a, `field`: `iteration.style`, `expected`: `String`, `actual`: v}))
+	var v, over px.Value
+	var ok bool
+	if v, ok = a.hash.Get4(`each`); ok {
+		builder.Style(wf.IterationStyleEach)
+		over = v
+	} else if v, ok = a.hash.Get4(`eachPair`); ok {
+		builder.Style(wf.IterationStyleEachPair)
+		over = v
+	} else if v, ok = a.hash.Get4(`times`); ok {
+		builder.Style(wf.IterationStyleTimes)
+		over = v
+	} else if v, ok = a.hash.Get4(`range`); ok {
+		builder.Style(wf.IterationStyleRange)
+		over = v
 	}
-	if name, ok := iteratorDef.Get4(`name`); ok {
-		builder.Name(name.String())
+	if v, ok = a.hash.Get4(`into`); ok {
+		builder.Into(v.String())
 	}
-	builder.Style(wf.NewIterationStyle(style.String()))
-
-	over, parameters := a.extractOver(builder.Context(), iteratorDef, []px.Parameter{})
+	over, parameters := a.resolveParameters(over, types.DefaultAnyType(), []px.Parameter{})
 	builder.Over(over)
 	builder.Parameters(parameters...)
-	vars := a.extractParameters(builder.Context(), iteratorDef, `variable`, false)
-	if len(vars) == 0 {
-		vars = a.extractParameters(builder.Context(), iteratorDef, `variables`, false)
-	}
-	builder.Variables(vars...)
+	builder.Variables(a.extractParameters(builder.Context(), a.hash, `as`, false)...)
 
-	switch a.stepKind() {
-	case kindWorkflow:
-		builder.Workflow(a.buildWorkflow)
-	default:
-		builder.Resource(a.buildResource)
+	if v, ok = a.hash.Get4(`step`); ok {
+		var step px.OrderedMap
+		if step, ok = v.(px.OrderedMap); ok {
+			a.workflowStep(builder, a.Name(), step)
+		} else {
+			panic(px.Error(NotStep, issue.H{`actual`: v.PType()}))
+		}
 	}
 }
 
@@ -198,18 +204,6 @@ func (a *step) getWhen() string {
 		return when
 	}
 	return ``
-}
-
-func (a *step) extractOver(c px.Context, props px.OrderedMap, parameters []px.Parameter) (px.Value, []px.Parameter) {
-	if props == nil {
-		return px.Undef, parameters
-	}
-
-	v, ok := props.Get4(`over`)
-	if !ok {
-		return px.Undef, parameters
-	}
-	return a.resolveParameters(v, types.DefaultAnyType(), parameters)
 }
 
 func (a *step) extractParameters(c px.Context, props px.OrderedMap, field string, isReturns bool) []px.Parameter {

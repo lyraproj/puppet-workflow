@@ -1,5 +1,4 @@
 aws_vpc:
-  typespace: Aws
   parameters:
     tags:
       type: Hash[String,String]
@@ -10,6 +9,7 @@ aws_vpc:
   steps:
     vpc:
       returns: vpcId
+      type: Aws::Vpc
       state:
         amazonProvidedIpv6CidrBlock: false
         cidrBlock: 192.168.0.0/16
@@ -20,6 +20,7 @@ aws_vpc:
         tags: $tags
     subnet:
       returns: subnetId
+      type: Aws::Subnet
       state:
         vpcId: $vpcId
         cidrBlock: 192.168.1.0/24

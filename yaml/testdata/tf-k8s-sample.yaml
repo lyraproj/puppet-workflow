@@ -3,8 +3,7 @@ returns:
 steps:
   namespace:
     returns: namespace_id
-    type: Kubernetes::Namespace
-    state:
+    Kubernetes::Namespace:
       namespace_id: "ignore"
       metadata:
         name: "terraform-lyra"

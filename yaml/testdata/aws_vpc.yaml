@@ -8,8 +8,7 @@ returns:
 steps:
   vpc:
     returns: vpcId
-    type: Aws::Vpc
-    state:
+    Aws::Vpc:
       amazonProvidedIpv6CidrBlock: false
       cidrBlock: 192.168.0.0/16
       enableDnsHostnames: false
@@ -19,8 +18,7 @@ steps:
       tags: $tags
   subnet:
     returns: subnetId
-    type: Aws::Subnet
-    state:
+    Aws::Subnet:
       vpcId: $vpcId
       cidrBlock: 192.168.1.0/24
       ipv6CidrBlock: ''

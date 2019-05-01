@@ -1,32 +1,31 @@
-aws_vpc:
-  parameters:
-    tags:
-      type: Hash[String,String]
-      lookup: aws.tags  
-  returns:
-    vpcId: String
-    subnetId: String
-  steps:
-    vpc:
-      returns: vpcId
-      type: Aws::Vpc
-      state:
-        amazonProvidedIpv6CidrBlock: false
-        cidrBlock: 192.168.0.0/16
-        enableDnsHostnames: false
-        enableDnsSupport: false
-        isDefault: false
-        state: available
-        tags: $tags
-    subnet:
-      returns: subnetId
-      type: Aws::Subnet
-      state:
-        vpcId: $vpcId
-        cidrBlock: 192.168.1.0/24
-        ipv6CidrBlock: ''
-        tags: $tags
-        assignIpv6AddressOnCreation: false
-        mapPublicIpOnLaunch: false
-        defaultForAz: false
-        state: available
+parameters:
+  tags:
+    type: Hash[String,String]
+    lookup: aws.tags
+returns:
+  vpcId: String
+  subnetId: String
+steps:
+  vpc:
+    returns: vpcId
+    type: Aws::Vpc
+    state:
+      amazonProvidedIpv6CidrBlock: false
+      cidrBlock: 192.168.0.0/16
+      enableDnsHostnames: false
+      enableDnsSupport: false
+      isDefault: false
+      state: available
+      tags: $tags
+  subnet:
+    returns: subnetId
+    type: Aws::Subnet
+    state:
+      vpcId: $vpcId
+      cidrBlock: 192.168.1.0/24
+      ipv6CidrBlock: ''
+      tags: $tags
+      assignIpv6AddressOnCreation: false
+      mapPublicIpOnLaunch: false
+      defaultForAz: false
+      state: available

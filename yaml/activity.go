@@ -1,6 +1,7 @@
 package yaml
 
 import (
+	"path/filepath"
 	"regexp"
 	"strings"
 	"unicode"
@@ -30,25 +31,28 @@ func CreateStep(c px.Context, file string, content []byte) wf.Step {
 	defer c.StackPop()
 
 	v := yaml.Unmarshal(c, content)
-	h, ok := v.(px.OrderedMap)
-	if !(ok && h.Len() == 1) {
-		panic(px.Error(NotOneDefinition, issue.NoArgs))
+	def, ok := v.(px.OrderedMap)
+	if !ok {
+		panic(px.Error(NotStepDefinition, issue.NoArgs))
 	}
 
+	// Use base name of path extending from 'workflows' directory without extension as the name of the workflow
+	path := strings.Split(file, string([]byte{filepath.Separator}))
+	wfi := 0
+	for i, n := range path {
+		if strings.EqualFold(n, `workflows`) {
+			wfi = i + 1
+			break
+		}
+	}
 	var name string
-	var def px.OrderedMap
-	h.EachPair(func(k, v px.Value) {
-		if n, ok := k.(px.StringValue); ok {
-			name = n.String()
-		}
-		if m, ok := v.(px.OrderedMap); ok {
-			def = m
-		}
-	})
-	if name == `` || def == nil {
-		panic(px.Error(NotStep, issue.NoArgs))
+	if wfi > 0 {
+		name = strings.Join(path[wfi:], `::`)
+	} else {
+		// No 'workflows' directory found. Use base name.
+		name = path[len(path)-1]
 	}
-
+	name = name[:len(name)-len(filepath.Ext(name))]
 	a := newStep(name, nil, def)
 	switch a.stepKind() {
 	case kindWorkflow:

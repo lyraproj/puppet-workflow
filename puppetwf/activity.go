@@ -336,48 +336,28 @@ func (a *puppetStep) getState(c pdsl.EvaluationContext) px.OrderedMap {
 }
 
 func (a *puppetStep) getResourceType(c px.Context) px.ObjectType {
-	n := a.Name()
 	if a.properties != nil {
 		if tv, ok := a.properties.Get4(`type`); ok {
 			if t, ok := tv.(px.ObjectType); ok {
 				return t
 			}
 			if s, ok := tv.(px.StringValue); ok {
-				n = s.String()
+				n := s.String()
 				if !types.TypeNamePattern.MatchString(n) {
 					panic(px.Error(InvalidTypeName, issue.H{`name`: n}))
 				}
-			} else {
-				panic(px.Error(FieldTypeMismatch, issue.H{`field`: `definition`, `expected`: `Variant[String,ObjectType]`, `actual`: tv}))
+				if t, ok := px.Load(c, px.NewTypedName(px.NsType, n)); ok {
+					if pt, ok := t.(px.ObjectType); ok {
+						return pt
+					}
+					panic(px.Error(FieldTypeMismatch, issue.H{`field`: `type`, `expected`: `ObjectType`, `actual`: t}))
+				}
+				panic(px.Error(px.UnresolvedType, issue.H{`typeString`: n}))
 			}
-		} else {
-			ts := a.getTypeSpace()
-			if ts != `` {
-				n = ts + `::` + wf.LeafName(n)
-			}
+			panic(px.Error(FieldTypeMismatch, issue.H{`field`: `type`, `expected`: `Variant[String,ObjectType]`, `actual`: tv}))
 		}
 	}
-	tn := px.NewTypedName(px.NsType, n)
-	if t, ok := px.Load(c, tn); ok {
-		if pt, ok := t.(px.ObjectType); ok {
-			return pt
-		}
-		panic(px.Error(FieldTypeMismatch, issue.H{`field`: `definition`, `expected`: `ObjectType`, `actual`: t}))
-	}
-	panic(px.Error(px.UnresolvedType, issue.H{`typeString`: tn.Name()}))
-}
-
-func (a *puppetStep) getTypeSpace() string {
-	if ts, ok := a.getStringProperty(`typespace`); ok {
-		if !types.TypeNamePattern.MatchString(ts) {
-			panic(px.Error(InvalidTypeName, issue.H{`name`: ts}))
-		}
-		return ts
-	}
-	if a.parent != nil {
-		return a.parent.getTypeSpace()
-	}
-	return ``
+	panic(px.Error(MissingRequiredField, issue.H{`field`: `type`}))
 }
 
 func (a *puppetStep) getStringProperty(field string) (string, bool) {

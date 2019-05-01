@@ -1,13 +1,11 @@
-k8s_namespace:
-  typespace: Kubernetes
-  returns:
-    namespace_id: String
-  steps:
-    namespace:
-      returns: namespace_id
-      state:
-        namespace_id: "ignore"
-        metadata:
-          name: "terraform-lyra"
-          resource_version: "hi"
-          self_link: "me"
+returns:
+  namespace_id: String
+steps:
+  namespace:
+    returns: namespace_id
+    Kubernetes::Namespace:
+      namespace_id: "ignore"
+      metadata:
+        name: "terraform-lyra"
+        resource_version: "hi"
+        self_link: "me"

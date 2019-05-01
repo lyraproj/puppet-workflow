@@ -1,6 +1,8 @@
 package yaml
 
 import (
+	"fmt"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"unicode"
@@ -30,25 +32,28 @@ func CreateStep(c px.Context, file string, content []byte) wf.Step {
 	defer c.StackPop()
 
 	v := yaml.Unmarshal(c, content)
-	h, ok := v.(px.OrderedMap)
-	if !(ok && h.Len() == 1) {
-		panic(px.Error(NotOneDefinition, issue.NoArgs))
+	def, ok := v.(px.OrderedMap)
+	if !ok {
+		panic(px.Error(NotStepDefinition, issue.NoArgs))
 	}
 
+	// Use base name of path extending from 'workflows' directory without extension as the name of the workflow
+	path := strings.Split(file, string([]byte{filepath.Separator}))
+	wfi := 0
+	for i, n := range path {
+		if strings.EqualFold(n, `workflows`) {
+			wfi = i + 1
+			break
+		}
+	}
 	var name string
-	var def px.OrderedMap
-	h.EachPair(func(k, v px.Value) {
-		if n, ok := k.(px.StringValue); ok {
-			name = n.String()
-		}
-		if m, ok := v.(px.OrderedMap); ok {
-			def = m
-		}
-	})
-	if name == `` || def == nil {
-		panic(px.Error(NotStep, issue.NoArgs))
+	if wfi > 0 {
+		name = strings.Join(path[wfi:], `::`)
+	} else {
+		// No 'workflows' directory found. Use base name.
+		name = path[len(path)-1]
 	}
-
+	name = name[:len(name)-len(filepath.Ext(name))]
 	a := newStep(name, nil, def)
 	switch a.stepKind() {
 	case kindWorkflow:
@@ -74,12 +79,14 @@ func (a *step) stepKind() int {
 	if m.IncludesKey2(`steps`) {
 		return kindWorkflow
 	}
-	if m.IncludesKey2(`state`) {
-		return kindResource
-	}
 	if m.IncludesKey2(`each`) || m.IncludesKey2(`eachPair`) || m.IncludesKey2(`times`) || m.IncludesKey2(`range`) {
 		return kindCollect
 	}
+	// hash must include exactly one key which is a type name
+	if m.Keys().Select(func(key px.Value) bool { return types.TypeNamePattern.MatchString(key.String()) }).Len() == 1 {
+		return kindResource
+	}
+
 	panic(px.Error(NotStep, issue.NoArgs))
 }
 
@@ -377,8 +384,17 @@ func (a *step) attributeType(c px.Context, name string) px.Type {
 	panic(px.Error(px.AttributeNotFound, issue.H{`type`: tp, `name`: name}))
 }
 
+func (a *step) getTypeName() string {
+	keys := a.hash.Keys().Select(func(key px.Value) bool { return types.TypeNamePattern.MatchString(key.String()) })
+	if keys.Len() == 1 {
+		return keys.At(0).String()
+	}
+	// This should never happen since the step is identified by the presence of a unique type key.
+	panic(fmt.Errorf(`step has no type name key`))
+}
+
 func (a *step) getState(c px.Context, parameters []px.Parameter) (px.OrderedMap, []px.Parameter) {
-	de, ok := a.hash.Get4(`state`)
+	de, ok := a.hash.Get4(a.getTypeName())
 	if !ok {
 		return px.EmptyMap, []px.Parameter{}
 	}
@@ -508,49 +524,15 @@ func (a *step) getResourceType(c px.Context) px.ObjectType {
 	if a.rt != nil {
 		return a.rt
 	}
-	n := a.Name()
-	if tv, ok := a.hash.Get4(`type`); ok {
-		if t, ok := tv.(px.ObjectType); ok {
-			a.rt = t
-			return t
-		}
-		if s, ok := tv.(px.StringValue); ok {
-			n = s.String()
-			if !types.TypeNamePattern.MatchString(n) {
-				panic(px.Error(InvalidTypeName, issue.H{`name`: n}))
-			}
-		} else {
-			panic(px.Error(FieldTypeMismatch, issue.H{`step`: a, `field`: `definition`, `expected`: `Variant[String,ObjectType]`, `actual`: tv}))
-		}
-	} else {
-		ts := a.getTypespace()
-		if ts != `` {
-			n = ts + `::` + wf.LeafName(n)
-		}
-	}
-
-	tn := px.NewTypedName(px.NsType, n)
-	if t, ok := px.Load(c, tn); ok {
+	n := a.getTypeName()
+	if t, ok := px.Load(c, px.NewTypedName(px.NsType, n)); ok {
 		if pt, ok := t.(px.ObjectType); ok {
 			a.rt = pt
 			return pt
 		}
-		panic(px.Error(FieldTypeMismatch, issue.H{`step`: a, `field`: `definition`, `expected`: `ObjectType`, `actual`: t}))
+		panic(px.Error(FieldTypeMismatch, issue.H{`step`: a, `field`: n, `expected`: `ObjectType`, `actual`: t}))
 	}
-	panic(px.Error(px.UnresolvedType, issue.H{`typeString`: tn.Name()}))
-}
-
-func (a *step) getTypespace() string {
-	if ts, ok := a.getStringProperty(a.hash, `typespace`); ok {
-		if types.TypeNamePattern.MatchString(ts) {
-			return ts
-		}
-		panic(px.Error(InvalidTypeName, issue.H{`name`: ts}))
-	}
-	if a.parent != nil {
-		return a.parent.getTypespace()
-	}
-	return ``
+	panic(px.Error(px.UnresolvedType, issue.H{`typeString`: n}))
 }
 
 func (a *step) getStringProperty(properties px.OrderedMap, field string) (string, bool) {

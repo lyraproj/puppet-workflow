@@ -26,6 +26,7 @@ type step struct {
 const kindWorkflow = 1
 const kindResource = 2
 const kindCollect = 3
+const kindReference = 4
 
 func CreateStep(c px.Context, file string, content []byte) wf.Step {
 	c.StackPush(issue.NewLocation(file, 0, 0))
@@ -60,6 +61,14 @@ func CreateStep(c px.Context, file string, content []byte) wf.Step {
 		return wf.NewWorkflow(c, func(wb wf.WorkflowBuilder) {
 			a.buildWorkflow(wb)
 		})
+	case kindCollect:
+		return wf.NewIterator(c, func(ib wf.IteratorBuilder) {
+			a.buildIterator(ib)
+		})
+	case kindReference:
+		return wf.NewReference(c, func(rb wf.ReferenceBuilder) {
+			a.buildReference(rb)
+		})
 	default:
 		return wf.NewResource(c, func(wb wf.ResourceBuilder) {
 			a.buildResource(wb)
@@ -81,6 +90,9 @@ func (a *step) stepKind() int {
 	}
 	if m.IncludesKey2(`each`) || m.IncludesKey2(`eachPair`) || m.IncludesKey2(`times`) || m.IncludesKey2(`range`) {
 		return kindCollect
+	}
+	if m.IncludesKey2(`reference`) {
+		return kindReference
 	}
 	// hash must include exactly one key which is a type name
 	if m.Keys().Select(func(key px.Value) bool { return types.TypeNamePattern.MatchString(key.String()) }).Len() == 1 {
@@ -123,6 +135,23 @@ func (a *step) buildResource(builder wf.ResourceBuilder) {
 	if extId, ok := a.getStringProperty(a.hash, `external_id`); ok {
 		builder.ExternalId(extId)
 	}
+}
+
+func (a *step) buildReference(builder wf.ReferenceBuilder) {
+	c := builder.Context()
+
+	builder.Name(a.Name())
+	builder.When(a.getWhen())
+
+	builder.Parameters(a.extractParameters(c, a.hash, `parameters`, true)...)
+	builder.Returns(a.extractParameters(c, a.hash, `returns`, true)...)
+
+	// Step will reference a step with the same name by default.
+	reference := a.Name()
+	if ra, ok := a.getStringProperty(a.hash, `external_id`); ok && ra != `` {
+		reference = ra
+	}
+	builder.ReferenceTo(reference)
 }
 
 func (a *step) buildWorkflow(builder wf.WorkflowBuilder) {
@@ -213,7 +242,7 @@ func (a *step) getWhen() string {
 	return ``
 }
 
-func (a *step) extractParameters(c px.Context, props px.OrderedMap, field string, isReturns bool) []px.Parameter {
+func (a *step) extractParameters(c px.Context, props px.OrderedMap, field string, aliased bool) []px.Parameter {
 	if props == nil {
 		return []px.Parameter{}
 	}
@@ -227,8 +256,8 @@ func (a *step) extractParameters(c px.Context, props px.OrderedMap, field string
 		params := make([]px.Parameter, 0, ph.Len())
 		ph.EachPair(func(k, v px.Value) {
 			var p px.Parameter
-			if isReturns {
-				p = a.makeReturnsParameter(c, field, k, v)
+			if aliased {
+				p = a.makeAliasedParameter(c, field, k, v)
 			} else {
 				p = a.makeParametersParameter(c, field, k, v)
 			}
@@ -248,7 +277,7 @@ func (a *step) extractParameters(c px.Context, props px.OrderedMap, field string
 		pa.EachWithIndex(func(e px.Value, i int) {
 			if ne, ok := e.(px.StringValue); ok {
 				n := ne.String()
-				if isReturns && a.stepKind() == kindResource {
+				if aliased && a.stepKind() == kindResource {
 					// Names must match attribute names
 					params[i] = px.NewParameter(n, a.attributeType(c, n), nil, false)
 				} else {
@@ -301,7 +330,7 @@ func (a *step) makeParametersParameter(c px.Context, field string, k, v px.Value
 
 var varNamePattern = regexp.MustCompile(`\A[a-z]\w*(?:\.[a-z]\w*)*\z`)
 
-func (a *step) makeReturnsParameter(c px.Context, field string, k, v px.Value) (param px.Parameter) {
+func (a *step) makeAliasedParameter(c px.Context, field string, k, v px.Value) (param px.Parameter) {
 	// TODO: Iterator returns etc.
 	if n, ok := k.(px.StringValue); ok {
 		name := n.String()
@@ -318,6 +347,8 @@ func (a *step) makeReturnsParameter(c px.Context, field string, k, v px.Value) (
 				if a.stepKind() == kindResource {
 					// Alias declaration
 					param = px.NewParameter(name, a.attributeType(c, s), v, false)
+				} else if a.stepKind() == kindReference {
+					param = px.NewParameter(name, types.DefaultAnyType(), v, false)
 				}
 			}
 		case px.List:

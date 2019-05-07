@@ -23,6 +23,8 @@ github.com/lyraproj/issue v0.0.0-20190329160035-8bc10230f995 h1:vAlBUcYalN98yypS
 github.com/lyraproj/issue v0.0.0-20190329160035-8bc10230f995/go.mod h1:F3Zu9SjR6zROUIVdxgxuX0/Mi4npwgDRalQCNzCyzU0=
 github.com/lyraproj/pcore v0.0.0-20190430133451-57d4da316569 h1:wzY8l1Rkl5UIwq7/2U56Mi2RkFjzChTTXzAnW311zTE=
 github.com/lyraproj/pcore v0.0.0-20190430133451-57d4da316569/go.mod h1:rEl2ewvqyi/MUo+sEoADKduVlO971HgiLJmu26EO+vM=
+github.com/lyraproj/pcore v0.0.0-20190502085713-c95bdae56d68 h1:/sZhuQeebUbpjuHL9EZCMBn0OJoHrR7okfYD0pnvlTI=
+github.com/lyraproj/pcore v0.0.0-20190502085713-c95bdae56d68/go.mod h1:rEl2ewvqyi/MUo+sEoADKduVlO971HgiLJmu26EO+vM=
 github.com/lyraproj/puppet-evaluator v0.0.0-20190430133644-e723fda87b97 h1:FhuoXiPRQQZRtppOi6ppzz65FUl7YEFNVuhaKNGHBuY=
 github.com/lyraproj/puppet-evaluator v0.0.0-20190430133644-e723fda87b97/go.mod h1:vdkj2zAsXYPkHwxr/J/eeIJFYiQYHF+Von3mbq0UvOU=
 github.com/lyraproj/puppet-parser v0.0.0-20190430133542-e2f2062b9126 h1:7GRijiODjFJCn9yVzYfoPZkvj7GtPM7zFVi897wbBYg=
@@ -31,6 +33,8 @@ github.com/lyraproj/semver v0.0.0-20181213164306-02ecea2cd6a2 h1:vb4PbiMtIXdhsOU
 github.com/lyraproj/semver v0.0.0-20181213164306-02ecea2cd6a2/go.mod h1:KOdZKnEBdDb2iGPUnHiKpk3M5cvv949xMyj8XPqaMF0=
 github.com/lyraproj/servicesdk v0.0.0-20190430133733-68a5a13f9111 h1:1ldNNnnK/Rb2myLgSk/hE/4TV8BOUzmGw+on4RV2Dl8=
 github.com/lyraproj/servicesdk v0.0.0-20190430133733-68a5a13f9111/go.mod h1:EmDPNtYrtPyWgOAIri33u3ARX8LQH4Iccfqf4KiqTnM=
+github.com/lyraproj/servicesdk v0.0.0-20190507084719-4338e6e7eb52 h1:K3WuiRy8Lu1y2V9nFAua87RNLfReSov6uIXKvEGYd8s=
+github.com/lyraproj/servicesdk v0.0.0-20190507084719-4338e6e7eb52/go.mod h1:EmDPNtYrtPyWgOAIri33u3ARX8LQH4Iccfqf4KiqTnM=
 github.com/mitchellh/go-testing-interface v0.0.0-20171004221916-a61a99592b77 h1:7GoSOOW2jpsfkntVKaS2rAr1TJqfcxotyaUcuxoZSzg=
 github.com/mitchellh/go-testing-interface v0.0.0-20171004221916-a61a99592b77/go.mod h1:kRemZodwjscx+RGhAo8eIhFbs2+BFgRtFPeD/KE+zxI=
 github.com/oklog/run v1.0.0 h1:Ru7dDtJNOyC66gQ5dQmaCa0qIsAUFY3sFpK1Xk8igrw=

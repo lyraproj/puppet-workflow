@@ -31,10 +31,8 @@ github.com/lyraproj/puppet-parser v0.0.0-20190430133542-e2f2062b9126 h1:7GRijiOD
 github.com/lyraproj/puppet-parser v0.0.0-20190430133542-e2f2062b9126/go.mod h1:SBAnx/uxMMKy29qME9jFlgHtVJOLI4q7dVMu0UTcIk0=
 github.com/lyraproj/semver v0.0.0-20181213164306-02ecea2cd6a2 h1:vb4PbiMtIXdhsOUinkkcqZiASDIZzXRhSG4yvNfE0tg=
 github.com/lyraproj/semver v0.0.0-20181213164306-02ecea2cd6a2/go.mod h1:KOdZKnEBdDb2iGPUnHiKpk3M5cvv949xMyj8XPqaMF0=
-github.com/lyraproj/servicesdk v0.0.0-20190430133733-68a5a13f9111 h1:1ldNNnnK/Rb2myLgSk/hE/4TV8BOUzmGw+on4RV2Dl8=
-github.com/lyraproj/servicesdk v0.0.0-20190430133733-68a5a13f9111/go.mod h1:EmDPNtYrtPyWgOAIri33u3ARX8LQH4Iccfqf4KiqTnM=
-github.com/lyraproj/servicesdk v0.0.0-20190507084719-4338e6e7eb52 h1:K3WuiRy8Lu1y2V9nFAua87RNLfReSov6uIXKvEGYd8s=
-github.com/lyraproj/servicesdk v0.0.0-20190507084719-4338e6e7eb52/go.mod h1:EmDPNtYrtPyWgOAIri33u3ARX8LQH4Iccfqf4KiqTnM=
+github.com/lyraproj/servicesdk v0.0.0-20190508121759-aa1c3c39fdcb h1:DABm4WdbGTFcujm6dzMN6K/saOhk7i02ZBfxZ40vR9g=
+github.com/lyraproj/servicesdk v0.0.0-20190508121759-aa1c3c39fdcb/go.mod h1:mAgzNVtNRt2DltU6NACk6bGvKyoEwcbgfhuQWkIYoIU=
 github.com/mitchellh/go-testing-interface v0.0.0-20171004221916-a61a99592b77 h1:7GoSOOW2jpsfkntVKaS2rAr1TJqfcxotyaUcuxoZSzg=
 github.com/mitchellh/go-testing-interface v0.0.0-20171004221916-a61a99592b77/go.mod h1:kRemZodwjscx+RGhAo8eIhFbs2+BFgRtFPeD/KE+zxI=
 github.com/oklog/run v1.0.0 h1:Ru7dDtJNOyC66gQ5dQmaCa0qIsAUFY3sFpK1Xk8igrw=

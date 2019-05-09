@@ -7,7 +7,7 @@ require (
 	github.com/lyraproj/pcore v0.0.0-20190502085713-c95bdae56d68
 	github.com/lyraproj/puppet-evaluator v0.0.0-20190430133644-e723fda87b97
 	github.com/lyraproj/puppet-parser v0.0.0-20190430133542-e2f2062b9126
-	github.com/lyraproj/servicesdk v0.0.0-20190507084719-4338e6e7eb52
+	github.com/lyraproj/servicesdk v0.0.0-20190508121759-aa1c3c39fdcb
 	github.com/stretchr/testify v1.3.0
 	gopkg.in/check.v1 v1.0.0-20161208181325-20d25e280405 // indirect
 )

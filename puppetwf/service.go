@@ -47,12 +47,14 @@ func WithService(serviceName string, sf func(c pdsl.EvaluationContext, s service
 	pcore.Set(`tasks`, types.BooleanTrue)
 	pcore.Set(`workflow`, types.BooleanTrue)
 	puppet.Do(func(c pdsl.EvaluationContext) {
-		sb := service.NewServiceBuilder(c, serviceName)
-		sb.RegisterApiType(`Puppet::Service`, &manifestService{})
-		sb.RegisterAPI(`Puppet::ManifestLoader`, &manifestLoader{c, serviceName})
-		s := sb.Server()
-		c.Set(`Puppet::ServiceLoader`, s)
-		sf(c, s)
+		c.DoWithLoader(service.FederatedLoader(c.Loader()), func() {
+			sb := service.NewServiceBuilder(c, serviceName)
+			sb.RegisterApiType(`Puppet::Service`, &manifestService{})
+			sb.RegisterAPI(`Puppet::ManifestLoader`, &manifestLoader{c, serviceName})
+			s := sb.Server()
+			c.Set(`Puppet::ServiceLoader`, s)
+			sf(c, s)
+		})
 	})
 }
 
@@ -64,7 +66,6 @@ func Start(serviceName string) {
 
 func (m *manifestLoader) LoadManifest(moduleDir string, fileName string) serviceapi.Definition {
 	ec := evaluator.WithParent(m.ctx, evaluator.NewEvaluator)
-	ec.SetLoader(px.NewFileBasedLoader(ec.Loader(), moduleDir, ``, px.PuppetDataTypePath))
 	content, err := ioutil.ReadFile(fileName)
 	if err != nil {
 		panic(px.Error(px.UnableToReadFile, issue.H{`path`: fileName, `detail`: err.Error()}))

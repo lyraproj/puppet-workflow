@@ -22,7 +22,11 @@ import (
 func withSampleService(sf func(pdsl.EvaluationContext, serviceapi.Service)) {
 	puppet.Do(func(ctx pdsl.EvaluationContext) {
 		// Command to start plug-in and read a given manifest
-		cmd := exec.Command("go", "run", "../main/main.go", "--debug")
+		err := os.Chdir(`testdata`)
+		if err != nil {
+			panic(err)
+		}
+		cmd := exec.Command("go", "run", "../../main/main.go", "--debug")
 
 		// Logger that prints JSON on Stderr
 		logger := hclog.New(&hclog.LoggerOptions{
@@ -65,7 +69,7 @@ func withSampleLocalService(sf func(pdsl.EvaluationContext, serviceapi.Service))
 func TestStep(t *testing.T) {
 	withSampleService(func(ctx pdsl.EvaluationContext, s serviceapi.Service) {
 		s.Metadata(ctx)
-		rs := s.Invoke(ctx, puppetwf.ManifestLoaderID, "loadManifest", types.WrapString("testdata"), types.WrapString("testdata/aws_example.pp")).(serviceapi.Definition)
+		rs := s.Invoke(ctx, puppetwf.ManifestLoaderID, "loadManifest", types.WrapString("testdata"), types.WrapString("aws_example.pp")).(serviceapi.Definition)
 		v := s.Invoke(ctx, rs.Identifier().Name(), "metadata")
 		assert.Implements(t, (*px.List)(nil), v, "metadata type")
 		vl := v.(px.List)
@@ -84,7 +88,7 @@ func TestStep(t *testing.T) {
   ),
   'serviceId' => TypedName(
     'namespace' => 'service',
-    'name' => 'Testdata::Aws_examplePp'
+    'name' => 'Aws_examplePp'
   ),
   'properties' => {
     'parameters' => [
@@ -113,7 +117,7 @@ func TestStep(t *testing.T) {
         ),
         'serviceId' => TypedName(
           'namespace' => 'service',
-          'name' => 'Testdata::Aws_examplePp'
+          'name' => 'Aws_examplePp'
         ),
         'properties' => {
           'parameters' => [
@@ -137,7 +141,7 @@ func TestStep(t *testing.T) {
         ),
         'serviceId' => TypedName(
           'namespace' => 'service',
-          'name' => 'Testdata::Aws_examplePp'
+          'name' => 'Aws_examplePp'
         ),
         'properties' => {
           'parameters' => [

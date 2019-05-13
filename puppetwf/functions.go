@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"os/exec"
 
+	"github.com/lyraproj/servicesdk/wf"
+
 	"github.com/lyraproj/issue/issue"
 	"github.com/lyraproj/pcore/px"
 	"github.com/lyraproj/pcore/types"
@@ -37,7 +39,7 @@ func init() {
 						return px.Undef
 					}
 				}
-				panic(px.Error(NoServerBuilderInContext, issue.NoArgs))
+				panic(px.Error(wf.NoServerBuilderInContext, issue.NoArgs))
 			})
 		},
 	)

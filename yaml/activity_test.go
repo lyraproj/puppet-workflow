@@ -127,7 +127,8 @@ func ExampleCreateStep() {
 	//               'type' => Optional[String]
 	//             )],
 	//           'resourceType' => Aws::Vpc,
-	//           'style' => 'resource'
+	//           'style' => 'resource',
+	//           'origin' => '(file: testdata/aws_vpc.yaml)'
 	//         }
 	//       ),
 	//       Service::Definition(
@@ -155,10 +156,12 @@ func ExampleCreateStep() {
 	//               'type' => Optional[String]
 	//             )],
 	//           'resourceType' => Aws::Subnet,
-	//           'style' => 'resource'
+	//           'style' => 'resource',
+	//           'origin' => '(file: testdata/aws_vpc.yaml)'
 	//         }
 	//       )],
-	//     'style' => 'workflow'
+	//     'style' => 'workflow',
+	//     'origin' => '(file: testdata/aws_vpc.yaml)'
 	//   }
 	// )
 	// Aws::Vpc(

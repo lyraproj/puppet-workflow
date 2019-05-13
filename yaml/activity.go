@@ -30,7 +30,8 @@ const kindCollect = 3
 const kindReference = 4
 
 func CreateStep(c px.Context, file string, content []byte) wf.Step {
-	c.StackPush(issue.NewLocation(file, 0, 0))
+	loc := issue.NewLocation(file, 0, 0)
+	c.StackPush(loc)
 	defer c.StackPop()
 
 	v := yaml.Unmarshal(c, content)
@@ -56,7 +57,7 @@ func CreateStep(c px.Context, file string, content []byte) wf.Step {
 		name = path[len(path)-1]
 	}
 	name = name[:len(name)-len(filepath.Ext(name))]
-	a := newStep(name, issue.NewLocation(file, 0, 0), nil, def)
+	a := newStep(name, loc, nil, def)
 	switch a.stepKind() {
 	case kindWorkflow:
 		return wf.NewWorkflow(c, func(wb wf.WorkflowBuilder) {

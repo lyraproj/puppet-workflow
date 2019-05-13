@@ -131,7 +131,8 @@ func TestStep(t *testing.T) {
               'type' => Any
             )],
           'resourceType' => Aws::Vpc,
-          'style' => 'resource'
+          'style' => 'resource',
+          'origin' => ''
         }
       ),
       Service::Definition(
@@ -159,10 +160,12 @@ func TestStep(t *testing.T) {
               'type' => Any
             )],
           'resourceType' => Aws::Subnet,
-          'style' => 'resource'
+          'style' => 'resource',
+          'origin' => ''
         }
       )],
-    'style' => 'workflow'
+    'style' => 'workflow',
+    'origin' => ''
   }
 )`, px.ToPrettyString(def))
 	})

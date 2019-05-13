@@ -17,6 +17,7 @@ import (
 
 type step struct {
 	name   string
+	origin issue.Location
 	parent *step
 	hash   px.OrderedMap
 	rt     px.ObjectType
@@ -35,7 +36,7 @@ func CreateStep(c px.Context, file string, content []byte) wf.Step {
 	v := yaml.Unmarshal(c, content)
 	def, ok := v.(px.OrderedMap)
 	if !ok {
-		panic(px.Error(NotStepDefinition, issue.NoArgs))
+		panic(px.Error(wf.NotStepDefinition, issue.NoArgs))
 	}
 
 	// Use base name of path extending from 'workflows' directory without extension as the name of the workflow
@@ -55,7 +56,7 @@ func CreateStep(c px.Context, file string, content []byte) wf.Step {
 		name = path[len(path)-1]
 	}
 	name = name[:len(name)-len(filepath.Ext(name))]
-	a := newStep(name, nil, def)
+	a := newStep(name, issue.NewLocation(file, 0, 0), nil, def)
 	switch a.stepKind() {
 	case kindWorkflow:
 		return wf.NewWorkflow(c, func(wb wf.WorkflowBuilder) {
@@ -76,11 +77,27 @@ func CreateStep(c px.Context, file string, content []byte) wf.Step {
 	}
 }
 
-func newStep(name string, parent *step, ex px.OrderedMap) *step {
-	ca := &step{parent: parent, hash: ex}
+func newStep(name string, origin issue.Location, parent *step, ex px.OrderedMap) *step {
+	ca := &step{origin: origin, parent: parent, hash: ex}
 	sgs := strings.Split(name, `::`)
 	ca.name = sgs[len(sgs)-1]
 	return ca
+}
+
+func (a *step) amendError() {
+	if r := recover(); r != nil {
+		if rx, ok := r.(issue.Reported); ok {
+			// Location and stack included in nested error
+			r = issue.ErrorWithoutStack(wf.StepBuildError, issue.H{`step`: a.Label()}, nil, rx)
+		} else {
+			r = issue.NewNested(wf.StepBuildError, issue.H{`step`: a.Label()}, a.origin, wf.ToError(r))
+		}
+		panic(r)
+	}
+}
+
+func (a *step) Error(code issue.Code, args issue.H) issue.Reported {
+	return px.Error2(a.origin, code, args)
 }
 
 func (a *step) stepKind() int {
@@ -99,7 +116,7 @@ func (a *step) stepKind() int {
 		return kindResource
 	}
 
-	panic(px.Error(NotStep, issue.NoArgs))
+	panic(a.Error(wf.NotStep, issue.NoArgs))
 }
 
 func (a *step) Step() wf.Step {
@@ -110,8 +127,15 @@ func (a *step) Name() string {
 	return a.name
 }
 
+func (a *step) QName() string {
+	if a.parent != nil {
+		return a.parent.QName() + `/` + a.name
+	}
+	return a.name
+}
+
 func (a *step) Label() string {
-	return a.Style() + " " + a.Name()
+	return a.Style() + " " + a.QName()
 }
 
 func (a *step) buildStep(builder wf.Builder) {
@@ -122,6 +146,8 @@ func (a *step) buildStep(builder wf.Builder) {
 }
 
 func (a *step) buildResource(builder wf.ResourceBuilder) {
+	defer a.amendError()
+
 	c := builder.Context()
 
 	builder.Name(a.Name())
@@ -138,6 +164,8 @@ func (a *step) buildResource(builder wf.ResourceBuilder) {
 }
 
 func (a *step) buildReference(builder wf.ReferenceBuilder) {
+	defer a.amendError()
+
 	c := builder.Context()
 
 	builder.Name(a.Name())
@@ -148,7 +176,7 @@ func (a *step) buildReference(builder wf.ReferenceBuilder) {
 
 	// Step will reference a step with the same name by default.
 	reference := a.Name()
-	if ra, ok := a.getStringProperty(a.hash, `external_id`); ok && ra != `` {
+	if ra, ok := a.getStringProperty(a.hash, `reference`); ok && ra != `` {
 		reference = ra
 	}
 	builder.ReferenceTo(reference)
@@ -163,7 +191,7 @@ func (a *step) buildWorkflow(builder wf.WorkflowBuilder) {
 
 	block, ok := de.(px.OrderedMap)
 	if !ok {
-		panic(px.Error(FieldTypeMismatch, issue.H{`step`: a, `field`: `definition`, `expected`: `CodeBlock`, `actual`: de}))
+		panic(a.Error(wf.FieldTypeMismatch, issue.H{`step`: a, `field`: `definition`, `expected`: `CodeBlock`, `actual`: de}))
 	}
 
 	// Block should only contain step expressions or something is wrong.
@@ -171,18 +199,20 @@ func (a *step) buildWorkflow(builder wf.WorkflowBuilder) {
 		if as, ok := v.(px.OrderedMap); ok {
 			a.workflowStep(builder, k.String(), as)
 		} else {
-			panic(px.Error(NotStep, issue.H{`actual`: as}))
+			panic(a.Error(wf.NotStep, issue.H{`actual`: as}))
 		}
 	})
 }
 
 func (a *step) workflowStep(builder wf.ChildBuilder, name string, as px.OrderedMap) {
-	ac := newStep(name, a, as)
+	ac := newStep(name, a.origin, a, as)
 	switch ac.stepKind() {
 	case kindCollect:
 		builder.Iterator(ac.buildIterator)
 	case kindWorkflow:
 		builder.Workflow(ac.buildWorkflow)
+	case kindReference:
+		builder.Reference(ac.buildReference)
 	default:
 		builder.Resource(ac.buildResource)
 	}
@@ -194,6 +224,8 @@ func (a *step) Style() string {
 		return `workflow`
 	case kindCollect:
 		return `collect`
+	case kindReference:
+		return `reference`
 	default:
 		return `resource`
 	}
@@ -230,7 +262,7 @@ func (a *step) buildIterator(builder wf.IteratorBuilder) {
 		if step, ok = v.(px.OrderedMap); ok {
 			a.workflowStep(builder, a.Name(), step)
 		} else {
-			panic(px.Error(NotStep, issue.H{`actual`: v.PType()}))
+			panic(a.Error(wf.NotStep, issue.H{`actual`: v.PType()}))
 		}
 	}
 }
@@ -284,12 +316,12 @@ func (a *step) extractParameters(c px.Context, props px.OrderedMap, field string
 					params[i] = px.NewParameter(n, types.DefaultAnyType(), nil, false)
 				}
 			} else {
-				panic(px.Error(BadParameter, issue.H{`step`: a, `name`: e, `parameterType`: field}))
+				panic(a.Error(wf.BadParameter, issue.H{`step`: a, `name`: e, `parameterType`: field}))
 			}
 		})
 		return params
 	}
-	panic(px.Error(FieldTypeMismatch, issue.H{`step`: a, `field`: field, `expected`: `Hash`, `actual`: v.PType()}))
+	panic(a.Error(wf.FieldTypeMismatch, issue.H{`step`: a, `field`: field, `expected`: `Hash`, `actual`: v.PType()}))
 }
 
 func (a *step) makeParametersParameter(c px.Context, field string, k, v px.Value) (param px.Parameter) {
@@ -322,7 +354,7 @@ func (a *step) makeParametersParameter(c px.Context, field string, k, v px.Value
 		}
 	}
 	if param == nil {
-		panic(px.Error(BadParameter, issue.H{
+		panic(a.Error(wf.BadParameter, issue.H{
 			`step`: a, `name`: k, `parameterType`: `parameters`}))
 	}
 	return
@@ -370,7 +402,7 @@ func (a *step) makeAliasedParameter(c px.Context, field string, k, v px.Value) (
 		}
 	}
 	if param == nil {
-		panic(px.Error(BadParameter, issue.H{
+		panic(a.Error(wf.BadParameter, issue.H{
 			`step`: a, `name`: k, `parameterType`: `returns`}))
 	}
 	return
@@ -412,7 +444,7 @@ func (a *step) attributeType(c px.Context, name string) px.Type {
 	if at, ok := getAttributeType(tp, name); ok {
 		return at
 	}
-	panic(px.Error(px.AttributeNotFound, issue.H{`type`: tp, `name`: name}))
+	panic(a.Error(px.AttributeNotFound, issue.H{`type`: tp, `name`: name}))
 }
 
 func (a *step) getTypeName() string {
@@ -449,7 +481,7 @@ func (a *step) getState(c px.Context, parameters []px.Parameter) (px.OrderedMap,
 			return types.WrapHash(es), parameters
 		}
 	}
-	panic(px.Error(FieldTypeMismatch, issue.H{`step`: a, `field`: `definition`, `expected`: `Hash`, `actual`: de}))
+	panic(a.Error(wf.FieldTypeMismatch, issue.H{`step`: a, `field`: `definition`, `expected`: `Hash`, `actual`: de}))
 }
 
 func stripOptional(t px.Type) px.Type {
@@ -561,9 +593,9 @@ func (a *step) getResourceType(c px.Context) px.ObjectType {
 			a.rt = pt
 			return pt
 		}
-		panic(px.Error(FieldTypeMismatch, issue.H{`step`: a, `field`: n, `expected`: `ObjectType`, `actual`: t}))
+		panic(a.Error(wf.FieldTypeMismatch, issue.H{`step`: a, `field`: n, `expected`: `ObjectType`, `actual`: t}))
 	}
-	panic(px.Error(px.UnresolvedType, issue.H{`typeString`: n}))
+	panic(a.Error(px.UnresolvedType, issue.H{`typeString`: n}))
 }
 
 func (a *step) getStringProperty(properties px.OrderedMap, field string) (string, bool) {
@@ -575,5 +607,5 @@ func (a *step) getStringProperty(properties px.OrderedMap, field string) (string
 	if s, ok := v.(px.StringValue); ok {
 		return s.String(), true
 	}
-	panic(px.Error(FieldTypeMismatch, issue.H{`step`: a, `field`: field, `expected`: `String`, `actual`: v.PType()}))
+	panic(a.Error(wf.FieldTypeMismatch, issue.H{`step`: a, `field`: field, `expected`: `String`, `actual`: v.PType()}))
 }

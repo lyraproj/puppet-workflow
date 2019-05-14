@@ -10,39 +10,8 @@ import (
 	"github.com/lyraproj/puppet-evaluator/evaluator"
 	"github.com/lyraproj/puppet-evaluator/pdsl"
 	"github.com/lyraproj/puppet-parser/parser"
+	"github.com/lyraproj/servicesdk/wf"
 )
-
-var doType px.Type
-var crdType px.Type
-var crudType px.Type
-
-func init() {
-	doType = px.NewObjectType(`Puppet::Do`, `{
-		attributes => {
-      name => String
-    },
-    functions => {
-      do => Callable[[RichData,1], RichData]
-    }
-  }`)
-
-	crdType = px.NewObjectType(`Puppet::CRD`, `{
-		attributes => {
-      name => String
-    },
-    functions => {
-      create => Callable[[Object], Tuple[Object,String]],
-      read   => Callable[[String], Object],
-      delete => Callable[[String], Boolean]
-    }
-  }`)
-
-	crudType = px.NewObjectType(`Puppet::CRUD`, `Puppet::CRD{
-    functions => {
-      update => Callable[[String, Object], Object]
-    }
-  }`)
-}
 
 type do struct {
 	name       string
@@ -67,7 +36,7 @@ func (c *do) ToString(bld io.Writer, format px.FormatContext, g px.RDetect) {
 }
 
 func (c *do) PType() px.Type {
-	return doType
+	return wf.DoType
 }
 
 func (c *do) Get(key string) (px.Value, bool) {
@@ -102,7 +71,13 @@ func (c *do) Call(ctx px.Context, method px.ObjFunc, args []px.Value, block px.L
 			}
 		}
 	}()
-	result = evaluator.CallBlock(ctx.(pdsl.EvaluationContext), c.name, c.parameters, method.Type().(*types.CallableType), c.body, args)
+
+	am := args[0].(px.OrderedMap)
+	input := make([]px.Value, len(c.parameters))
+	for i, p := range c.parameters {
+		input[i] = am.Get5(p.Name(), px.Undef)
+	}
+	result = evaluator.CallBlock(ctx.(pdsl.EvaluationContext), c.name, c.parameters, method.Type().(*types.CallableType), c.body, input)
 	return
 }
 
@@ -130,7 +105,7 @@ func (c *crd) ToString(bld io.Writer, format px.FormatContext, g px.RDetect) {
 }
 
 func (c *crd) PType() px.Type {
-	return crdType
+	return wf.CrdType
 }
 
 func (c *crd) Get(key string) (px.Value, bool) {
@@ -169,7 +144,7 @@ func (c *crud) String() string {
 }
 
 func (c *crud) PType() px.Type {
-	return crudType
+	return wf.CrudType
 }
 
 func (c *crud) ToString(bld io.Writer, format px.FormatContext, g px.RDetect) {

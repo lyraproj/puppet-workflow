@@ -88,7 +88,7 @@ func ExampleCreateStep() {
 	//   ),
 	//   'properties' => {
 	//     'parameters' => [
-	//       Parameter(
+	//       Lyra::Parameter(
 	//         'name' => 'tags',
 	//         'type' => Hash[String, String],
 	//         'value' => Deferred(
@@ -97,11 +97,11 @@ func ExampleCreateStep() {
 	//         )
 	//       )],
 	//     'returns' => [
-	//       Parameter(
+	//       Lyra::Parameter(
 	//         'name' => 'vpcId',
 	//         'type' => String
 	//       ),
-	//       Parameter(
+	//       Lyra::Parameter(
 	//         'name' => 'subnetId',
 	//         'type' => String
 	//       )],
@@ -117,12 +117,12 @@ func ExampleCreateStep() {
 	//         ),
 	//         'properties' => {
 	//           'parameters' => [
-	//             Parameter(
+	//             Lyra::Parameter(
 	//               'name' => 'tags',
 	//               'type' => Hash[String, String]
 	//             )],
 	//           'returns' => [
-	//             Parameter(
+	//             Lyra::Parameter(
 	//               'name' => 'vpcId',
 	//               'type' => Optional[String]
 	//             )],
@@ -142,16 +142,16 @@ func ExampleCreateStep() {
 	//         ),
 	//         'properties' => {
 	//           'parameters' => [
-	//             Parameter(
+	//             Lyra::Parameter(
 	//               'name' => 'vpcId',
 	//               'type' => String
 	//             ),
-	//             Parameter(
+	//             Lyra::Parameter(
 	//               'name' => 'tags',
 	//               'type' => Hash[String, String]
 	//             )],
 	//           'returns' => [
-	//             Parameter(
+	//             Lyra::Parameter(
 	//               'name' => 'subnetId',
 	//               'type' => Optional[String]
 	//             )],

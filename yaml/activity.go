@@ -5,13 +5,13 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
-	"unicode"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/lyraproj/issue/issue"
 	"github.com/lyraproj/pcore/px"
 	"github.com/lyraproj/pcore/types"
 	"github.com/lyraproj/pcore/yaml"
+	"github.com/lyraproj/servicesdk/serviceapi"
 	"github.com/lyraproj/servicesdk/wf"
 )
 
@@ -253,7 +253,7 @@ func (a *step) buildIterator(builder wf.IteratorBuilder) {
 	if v, ok = a.hash.Get4(`into`); ok {
 		builder.Into(v.String())
 	}
-	over, parameters := a.resolveParameters(over, types.DefaultAnyType(), []px.Parameter{})
+	over, parameters := a.resolveParameters(over, types.DefaultAnyType(), []serviceapi.Parameter{})
 	builder.Over(over)
 	builder.Parameters(parameters...)
 	builder.Variables(a.extractParameters(builder.Context(), a.hash, `as`, false)...)
@@ -275,26 +275,20 @@ func (a *step) getWhen() string {
 	return ``
 }
 
-func (a *step) extractParameters(c px.Context, props px.OrderedMap, field string, aliased bool) []px.Parameter {
+func (a *step) extractParameters(c px.Context, props px.OrderedMap, field string, aliased bool) []serviceapi.Parameter {
 	if props == nil {
-		return []px.Parameter{}
+		return []serviceapi.Parameter{}
 	}
 
 	v, ok := props.Get4(field)
 	if !ok {
-		return []px.Parameter{}
+		return []serviceapi.Parameter{}
 	}
 
 	if ph, ok := v.(px.OrderedMap); ok {
-		params := make([]px.Parameter, 0, ph.Len())
+		params := make([]serviceapi.Parameter, 0, ph.Len())
 		ph.EachPair(func(k, v px.Value) {
-			var p px.Parameter
-			if aliased {
-				p = a.makeAliasedParameter(c, field, k, v)
-			} else {
-				p = a.makeParametersParameter(c, field, k, v)
-			}
-			params = append(params, p)
+			params = append(params, a.makeParameter(c, field, k, v, aliased))
 		})
 		return params
 	}
@@ -306,15 +300,15 @@ func (a *step) extractParameters(c px.Context, props px.OrderedMap, field string
 
 	if pa, ok := v.(*types.Array); ok {
 		// List of names.
-		params := make([]px.Parameter, pa.Len())
+		params := make([]serviceapi.Parameter, pa.Len())
 		pa.EachWithIndex(func(e px.Value, i int) {
 			if ne, ok := e.(px.StringValue); ok {
 				n := ne.String()
 				if aliased && a.stepKind() == kindResource {
 					// Names must match attribute names
-					params[i] = px.NewParameter(n, a.attributeType(c, n), nil, false)
+					params[i] = serviceapi.NewParameter(n, ``, a.attributeType(c, n), nil)
 				} else {
-					params[i] = px.NewParameter(n, types.DefaultAnyType(), nil, false)
+					params[i] = serviceapi.NewParameter(n, ``, types.DefaultAnyType(), nil)
 				}
 			} else {
 				panic(a.Error(wf.BadParameter, issue.H{`step`: a, `name`: e, `parameterType`: field}))
@@ -325,14 +319,34 @@ func (a *step) extractParameters(c px.Context, props px.OrderedMap, field string
 	panic(a.Error(wf.FieldTypeMismatch, issue.H{`step`: a, `field`: field, `expected`: `Hash`, `actual`: v.PType()}))
 }
 
-func (a *step) makeParametersParameter(c px.Context, field string, k, v px.Value) (param px.Parameter) {
+var varNamePattern = regexp.MustCompile(`\A[a-z]\w*(?:\.[a-z]\w*)*\z`)
+
+func (a *step) makeParameter(c px.Context, field string, k, v px.Value, aliased bool) (param serviceapi.Parameter) {
 	if n, ok := k.(px.StringValue); ok {
 		name := n.String()
 		switch v := v.(type) {
 		case px.Parameter:
+			var val px.Value
+			if v.HasValue() {
+				val = v.Value()
+			}
+			param = serviceapi.NewParameter(v.Name(), ``, v.Type(), val)
+		case serviceapi.Parameter:
 			param = v
 		case px.StringValue:
-			param = px.NewParameter(name, c.ParseType(v.String()), nil, false)
+			s := v.String()
+			if types.TypeNamePattern.MatchString(s) {
+				param = serviceapi.NewParameter(name, ``, c.ParseType(v.String()), nil)
+			} else {
+				if aliased && len(s) > 0 && varNamePattern.MatchString(s) {
+					if a.stepKind() == kindResource {
+						// Alias declaration
+						param = serviceapi.NewParameter(name, s, a.attributeType(c, s), nil)
+					} else if a.stepKind() == kindReference {
+						param = serviceapi.NewParameter(name, s, types.DefaultAnyType(), nil)
+					}
+				}
+			}
 		case px.OrderedMap:
 			tn, ok := a.getStringProperty(v, `type`)
 			if !ok {
@@ -351,60 +365,15 @@ func (a *step) makeParametersParameter(c px.Context, field string, k, v px.Value
 			} else {
 				val = v.Get5(`value`, nil)
 			}
-			param = px.NewParameter(name, tp, val, false)
+			alias := ``
+			if al, ok := v.Get4(`alias`); ok {
+				alias = al.String()
+			}
+			param = serviceapi.NewParameter(name, alias, tp, val)
 		}
 	}
 	if param == nil {
-		panic(a.Error(wf.BadParameter, issue.H{
-			`step`: a, `name`: k, `parameterType`: `parameters`}))
-	}
-	return
-}
-
-var varNamePattern = regexp.MustCompile(`\A[a-z]\w*(?:\.[a-z]\w*)*\z`)
-
-func (a *step) makeAliasedParameter(c px.Context, field string, k, v px.Value) (param px.Parameter) {
-	// TODO: Iterator returns etc.
-	if n, ok := k.(px.StringValue); ok {
-		name := n.String()
-		switch v := v.(type) {
-		case px.Parameter:
-			param = v
-		case px.StringValue:
-			s := v.String()
-			if len(s) > 0 && unicode.IsUpper(rune(s[0])) {
-				if a.stepKind() == kindWorkflow {
-					param = px.NewParameter(name, c.ParseType(s), nil, false)
-				}
-			} else if varNamePattern.MatchString(s) {
-				if a.stepKind() == kindResource {
-					// Alias declaration
-					param = px.NewParameter(name, a.attributeType(c, s), v, false)
-				} else if a.stepKind() == kindReference {
-					param = px.NewParameter(name, types.DefaultAnyType(), v, false)
-				}
-			}
-		case px.List:
-			if a.stepKind() == kindResource {
-				ts := make([]px.Type, 0, v.Len())
-				if v.All(func(e px.Value) bool {
-					if sv, ok := e.(px.StringValue); ok {
-						s := sv.String()
-						if varNamePattern.MatchString(s) {
-							ts = append(ts, a.attributeType(c, s))
-							return true
-						}
-					}
-					return false
-				}) {
-					param = px.NewParameter(name, types.NewTupleType(ts, nil), v, false)
-				}
-			}
-		}
-	}
-	if param == nil {
-		panic(a.Error(wf.BadParameter, issue.H{
-			`step`: a, `name`: k, `parameterType`: `returns`}))
+		panic(a.Error(wf.BadParameter, issue.H{`step`: a, `name`: k, `parameterType`: field}))
 	}
 	return
 }
@@ -457,10 +426,10 @@ func (a *step) getTypeName() string {
 	panic(fmt.Errorf(`step has no type name key`))
 }
 
-func (a *step) getState(c px.Context, parameters []px.Parameter) (px.OrderedMap, []px.Parameter) {
+func (a *step) getState(c px.Context, parameters []serviceapi.Parameter) (px.OrderedMap, []serviceapi.Parameter) {
 	de, ok := a.hash.Get4(a.getTypeName())
 	if !ok {
-		return px.EmptyMap, []px.Parameter{}
+		return px.EmptyMap, []serviceapi.Parameter{}
 	}
 
 	if hash, ok := de.(px.OrderedMap); ok {
@@ -492,7 +461,7 @@ func stripOptional(t px.Type) px.Type {
 	return t
 }
 
-func (a *step) resolveParameters(v px.Value, at px.Type, parameters []px.Parameter) (px.Value, []px.Parameter) {
+func (a *step) resolveParameters(v px.Value, at px.Type, parameters []serviceapi.Parameter) (px.Value, []serviceapi.Parameter) {
 	switch vr := v.(type) {
 	case px.StringValue:
 		s := vr.String()
@@ -505,14 +474,14 @@ func (a *step) resolveParameters(v px.Value, at px.Type, parameters []px.Paramet
 					if ip.Name() == vn {
 						if ip.Type() == types.DefaultAnyType() {
 							// Replace untyped with typed
-							parameters[i] = px.NewParameter(vn, at, nil, false)
+							parameters[i] = serviceapi.NewParameter(vn, ``, at, nil)
 						}
 						found = true
 						break
 					}
 				}
 				if !found {
-					parameters = append(parameters, px.NewParameter(vn, at, nil, false))
+					parameters = append(parameters, serviceapi.NewParameter(vn, ``, at, nil))
 				}
 				v = types.NewDeferred(s)
 			}

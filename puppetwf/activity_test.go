@@ -62,7 +62,12 @@ func withSampleService(sf func(pdsl.EvaluationContext, serviceapi.Service)) {
 
 /*
 func withSampleLocalService(sf func(pdsl.EvaluationContext, serviceapi.Service)) {
-	pwf.WithService(`Puppet`, sf)
+	// Command to start plug-in and read a given manifest
+	err := os.Chdir(`testdata`)
+	if err != nil {
+		panic(err)
+	}
+	puppetwf.WithService(`Puppet`, sf)
 }
 */
 
@@ -92,7 +97,7 @@ func TestStep(t *testing.T) {
   ),
   'properties' => {
     'parameters' => [
-      Parameter(
+      Lyra::Parameter(
         'name' => 'tags',
         'type' => Hash[String, String],
         'value' => Deferred(
@@ -101,11 +106,11 @@ func TestStep(t *testing.T) {
         )
       )],
     'returns' => [
-      Parameter(
+      Lyra::Parameter(
         'name' => 'vpcId',
         'type' => String
       ),
-      Parameter(
+      Lyra::Parameter(
         'name' => 'subnetId',
         'type' => String
       )],
@@ -121,12 +126,12 @@ func TestStep(t *testing.T) {
         ),
         'properties' => {
           'parameters' => [
-            Parameter(
+            Lyra::Parameter(
               'name' => 'tags',
               'type' => Any
             )],
           'returns' => [
-            Parameter(
+            Lyra::Parameter(
               'name' => 'vpcId',
               'type' => Any
             )],
@@ -146,16 +151,16 @@ func TestStep(t *testing.T) {
         ),
         'properties' => {
           'parameters' => [
-            Parameter(
+            Lyra::Parameter(
               'name' => 'tags',
               'type' => Any
             ),
-            Parameter(
+            Lyra::Parameter(
               'name' => 'vpcId',
               'type' => Any
             )],
           'returns' => [
-            Parameter(
+            Lyra::Parameter(
               'name' => 'subnetId',
               'type' => Any
             )],

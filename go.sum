@@ -29,6 +29,8 @@ github.com/lyraproj/puppet-parser v0.0.0-20190513085601-0448059066e7 h1:gQ6z47Xn
 github.com/lyraproj/puppet-parser v0.0.0-20190513085601-0448059066e7/go.mod h1:kM/x+lqmCiuxsK4FgAF1kIwlgQrcZfsI6gnX5YzTIe4=
 github.com/lyraproj/semver v0.0.0-20181213164306-02ecea2cd6a2 h1:vb4PbiMtIXdhsOUinkkcqZiASDIZzXRhSG4yvNfE0tg=
 github.com/lyraproj/semver v0.0.0-20181213164306-02ecea2cd6a2/go.mod h1:KOdZKnEBdDb2iGPUnHiKpk3M5cvv949xMyj8XPqaMF0=
+github.com/lyraproj/servicesdk v0.0.0-20190514145959-5467213bbd8f h1:SFmT35xzxpVUOHn9b+1o8eEAGKdx0/DswRJPZmn/x0k=
+github.com/lyraproj/servicesdk v0.0.0-20190514145959-5467213bbd8f/go.mod h1:8qbDlTKcDFzE+pHn2ZhQrXX3lh2ChiJb9aq9pZHmg70=
 github.com/mitchellh/go-testing-interface v0.0.0-20171004221916-a61a99592b77 h1:7GoSOOW2jpsfkntVKaS2rAr1TJqfcxotyaUcuxoZSzg=
 github.com/mitchellh/go-testing-interface v0.0.0-20171004221916-a61a99592b77/go.mod h1:kRemZodwjscx+RGhAo8eIhFbs2+BFgRtFPeD/KE+zxI=
 github.com/oklog/run v1.0.0 h1:Ru7dDtJNOyC66gQ5dQmaCa0qIsAUFY3sFpK1Xk8igrw=
@@ -39,8 +41,6 @@ github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+
 github.com/stretchr/testify v1.2.2/go.mod h1:a8OnRcib4nhh0OaRAV+Yts87kKdq0PP7pXfy6kDkUVs=
 github.com/stretchr/testify v1.3.0 h1:TivCn/peBQ7UY8ooIcPgZFpTNSz0Q2U6UrFlUfqbe0Q=
 github.com/stretchr/testify v1.3.0/go.mod h1:M5WIy9Dh21IEIfnGCwXGc5bZfKNJtfHm1UVUgZn+9EI=
-github.com/thallgren/servicesdk v0.0.0-20190514125406-2af500baae27 h1:h3UPZ9axZWiZlHd/5YfSFHwViahz5iv7zw8ZbGkW91Y=
-github.com/thallgren/servicesdk v0.0.0-20190514125406-2af500baae27/go.mod h1:8qbDlTKcDFzE+pHn2ZhQrXX3lh2ChiJb9aq9pZHmg70=
 golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2/go.mod h1:djNgcEr1/C05ACkg1iLfiJU5Ep61QUkGW8qpdssI0+w=
 golang.org/x/lint v0.0.0-20181026193005-c67002cb31c3/go.mod h1:UVdnD1Gm6xHRNCYTkRU2/jEulfH38KcIWyp/GAMgvoE=
 golang.org/x/net v0.0.0-20180826012351-8a410e7b638d/go.mod h1:mL1N/T3taQHkDXs73rZJwtUhF3w3ftmwwsq0BUmARs4=

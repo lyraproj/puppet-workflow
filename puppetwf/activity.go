@@ -9,6 +9,7 @@ import (
 	"github.com/lyraproj/puppet-evaluator/evaluator"
 	"github.com/lyraproj/puppet-evaluator/pdsl"
 	"github.com/lyraproj/puppet-parser/parser"
+	"github.com/lyraproj/servicesdk/serviceapi"
 	"github.com/lyraproj/servicesdk/wf"
 )
 
@@ -59,7 +60,7 @@ func (a *puppetStep) buildStep(builder wf.Builder) {
 	builder.Name(a.Name())
 	builder.When(a.getWhen())
 	builder.Parameters(a.extractParameters(a.properties, `parameters`, a.inferParameters)...)
-	builder.Returns(a.extractParameters(a.properties, `returns`, func() []px.Parameter { return []px.Parameter{} })...)
+	builder.Returns(a.extractParameters(a.properties, `returns`, func() []serviceapi.Parameter { return []serviceapi.Parameter{} })...)
 }
 
 func newStep(c pdsl.EvaluationContext, parent *puppetStep, ex *parser.StepExpression) *puppetStep {
@@ -102,16 +103,16 @@ func (a *puppetStep) buildAction(builder wf.ActionBuilder) {
 		fn := evaluator.NewPuppetFunction(fd)
 		fn.Resolve(builder.Context())
 		builder.Name(fn.Name())
-		builder.Parameters(fn.Parameters()...)
+		builder.Parameters(convertPxParams(fn.Parameters())...)
 		builder.Doer(&do{name: fn.Name(), body: fd.Body(), parameters: fn.Parameters()})
 		s := fn.Signature()
 		rt := s.ReturnType()
 		if rt != nil {
 			if st, ok := rt.(*types.StructType); ok {
 				es := st.Elements()
-				ps := make([]px.Parameter, len(es))
+				ps := make([]serviceapi.Parameter, len(es))
 				for i, e := range es {
-					ps[i] = px.NewParameter(e.Name(), e.Value(), nil, false)
+					ps[i] = serviceapi.NewParameter(e.Name(), ``, e.Value(), nil)
 				}
 				builder.Returns(ps...)
 			}
@@ -120,7 +121,7 @@ func (a *puppetStep) buildAction(builder wf.ActionBuilder) {
 	}
 	if ae, ok := a.expression.(*parser.StepExpression); ok {
 		a.buildStep(builder)
-		builder.Doer(&do{name: builder.GetName(), body: ae.Definition(), parameters: builder.GetParameters()})
+		builder.Doer(&do{name: builder.GetName(), body: ae.Definition(), parameters: convertToPxParams(builder.GetParameters())})
 	}
 }
 
@@ -183,13 +184,13 @@ func (a *puppetStep) Style() string {
 	return string(a.expression.(*parser.StepExpression).Style())
 }
 
-func (a *puppetStep) inferParameters() []px.Parameter {
+func (a *puppetStep) inferParameters() []serviceapi.Parameter {
 	// TODO:
-	return []px.Parameter{}
+	return []serviceapi.Parameter{}
 }
 
-func noParamsFunc() []px.Parameter {
-	return []px.Parameter{}
+func noParamsFunc() []serviceapi.Parameter {
+	return []serviceapi.Parameter{}
 }
 
 func (a *puppetStep) buildIterator(builder wf.IteratorBuilder) {
@@ -239,13 +240,13 @@ func (a *puppetStep) extractOver(props px.OrderedMap) px.Value {
 	return props.Get5(`over`, px.Undef)
 }
 
-func (a *puppetStep) getAPI(c px.Context, parameters []px.Parameter) px.PuppetObject {
+func (a *puppetStep) getAPI(c px.Context, parameters []serviceapi.Parameter) px.PuppetObject {
 	var de parser.Expression
 	if ae, ok := a.expression.(*parser.StepExpression); ok {
 		de = ae.Definition()
 	} else {
 		// The block is the function
-		return NewDo(a.Name(), parameters, a.expression)
+		return NewDo(a.Name(), convertToPxParams(parameters), a.expression)
 	}
 	if de == nil {
 		panic(c.Error(a.expression, wf.NoDefinition, issue.NoArgs))
@@ -310,7 +311,7 @@ func (a *puppetStep) getWhen() string {
 	return ``
 }
 
-func (a *puppetStep) extractParameters(props px.OrderedMap, field string, dflt func() []px.Parameter) []px.Parameter {
+func (a *puppetStep) extractParameters(props px.OrderedMap, field string, dflt func() []serviceapi.Parameter) []serviceapi.Parameter {
 	if props == nil {
 		return dflt()
 	}
@@ -325,12 +326,12 @@ func (a *puppetStep) extractParameters(props px.OrderedMap, field string, dflt f
 		panic(a.Error(wf.FieldTypeMismatch, issue.H{`field`: field, `expected`: `Array`, `actual`: v.PType()}))
 	}
 
-	params := make([]px.Parameter, ia.Len())
+	params := make([]serviceapi.Parameter, ia.Len())
 	ia.EachWithIndex(func(v px.Value, i int) {
 		if p, ok := v.(px.Parameter); ok {
-			params[i] = p
+			params[i] = convertPxParam(p)
 		} else {
-			panic(a.Error(wf.ElementNotParameter, issue.H{`type`: p.PType(), `field`: field}))
+			panic(a.Error(wf.ElementNotParameter, issue.H{`type`: v.PType(), `field`: field}))
 		}
 	})
 	return params
@@ -408,4 +409,37 @@ func (a *puppetStep) amendError() {
 		}
 		panic(r)
 	}
+}
+
+func convertPxParams(ps []px.Parameter) []serviceapi.Parameter {
+	cs := make([]serviceapi.Parameter, len(ps))
+	for i, p := range ps {
+		cs[i] = convertPxParam(p)
+	}
+	return cs
+}
+
+func convertPxParam(p px.Parameter) serviceapi.Parameter {
+	var val px.Value
+	alias := ``
+	if p.HasValue() {
+		val = p.Value()
+		if vs, ok := val.(px.StringValue); ok {
+			alias = vs.String()
+			val = nil
+		}
+	}
+	return serviceapi.NewParameter(p.Name(), alias, p.Type(), val)
+}
+
+func convertToPxParams(ps []serviceapi.Parameter) []px.Parameter {
+	cs := make([]px.Parameter, len(ps))
+	for i, p := range ps {
+		cs[i] = convertToPxParam(p)
+	}
+	return cs
+}
+
+func convertToPxParam(p serviceapi.Parameter) px.Parameter {
+	return px.NewParameter(p.Name(), p.Type(), p.Value(), false)
 }

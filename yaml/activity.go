@@ -348,12 +348,12 @@ func (a *step) makeParameter(c px.Context, field string, k, v px.Value, aliased 
 				}
 			}
 		case px.OrderedMap:
-			tn, ok := a.getStringProperty(v, `type`)
-			if !ok {
-				break
+			var tp px.Type
+			if tn, ok := a.getStringProperty(v, `type`); ok {
+				tp = c.ParseType(tn)
 			}
+
 			var val px.Value
-			tp := c.ParseType(tn)
 			if lu, ok := v.Get4(`lookup`); ok {
 				var args []px.Value
 				if a, ok := lu.(*types.Array); ok {
@@ -364,7 +364,19 @@ func (a *step) makeParameter(c px.Context, field string, k, v px.Value, aliased 
 				val = types.NewDeferred(`lookup`, args...)
 			} else {
 				val = v.Get5(`value`, nil)
+				if tp != nil {
+					val = types.CoerceTo(c, fmt.Sprintf(`%s:%s parameter value`, a.Label(), name), tp, val)
+				}
 			}
+
+			if tp == nil {
+				if val != nil && !val.Equals(px.Undef, nil) {
+					tp = val.PType()
+				} else {
+					tp = types.DefaultAnyType()
+				}
+			}
+
 			alias := ``
 			if al, ok := v.Get4(`alias`); ok {
 				alias = al.String()

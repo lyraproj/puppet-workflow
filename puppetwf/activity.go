@@ -401,13 +401,7 @@ func (a *puppetStep) getStringProperty(field string) (string, bool) {
 
 func (a *puppetStep) amendError() {
 	if r := recover(); r != nil {
-		if rx, ok := r.(issue.Reported); ok {
-			// Location and stack included in nested error
-			r = issue.ErrorWithoutStack(wf.StepBuildError, issue.H{`step`: a.Name()}, nil, rx)
-		} else {
-			r = issue.NewNested(wf.StepBuildError, issue.H{`step`: a.Name()}, nil, wf.ToError(r))
-		}
-		panic(r)
+		panic(issue.NewNested(wf.StepBuildError, issue.H{`step`: a.Name()}, nil, wf.ToError(r)))
 	}
 }
 

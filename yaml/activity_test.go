@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"testing"
+
+	"github.com/stretchr/testify/require"
 
 	"github.com/lyraproj/pcore/pcore"
 	"github.com/lyraproj/pcore/px"
@@ -176,4 +179,48 @@ func ExampleCreateStep() {
 	//   'isDefault' => false,
 	//   'state' => 'available'
 	// )
+}
+
+func TestParse_unresolvedType(t *testing.T) {
+	requireError(t, `Reference to unresolved type 'No::Such::Type' (file: testdata/typefail.yaml, line: 3, column: 5)`, func() {
+		pcore.Do(func(ctx px.Context) {
+			ctx.SetLoader(px.NewFileBasedLoader(ctx.Loader(), "../puppetwf/testdata", ``, px.PuppetDataTypePath))
+			workflowFile := "testdata/typefail.yaml"
+			content, err := ioutil.ReadFile(workflowFile)
+			if err != nil {
+				panic(err.Error())
+			}
+			yaml.CreateStep(ctx, workflowFile, content)
+		})
+	})
+}
+
+func TestParse_unresolvedAttr(t *testing.T) {
+	requireError(t, `A Kubernetes::Namespace has no attribute named no_such_attribute (file: testdata/attrfail.yaml, line: 3, column: 14)`, func() {
+		pcore.Do(func(ctx px.Context) {
+			ctx.SetLoader(px.NewFileBasedLoader(ctx.Loader(), "../puppetwf/testdata", ``, px.PuppetDataTypePath))
+			workflowFile := "testdata/attrfail.yaml"
+			content, err := ioutil.ReadFile(workflowFile)
+			if err != nil {
+				panic(err.Error())
+			}
+			yaml.CreateStep(ctx, workflowFile, content)
+		})
+	})
+}
+
+func requireError(t *testing.T, msg string, f func()) {
+	t.Helper()
+	defer func() {
+		t.Helper()
+		if r := recover(); r != nil {
+			if err, ok := r.(error); ok {
+				require.Equal(t, msg, err.Error())
+			} else {
+				panic(r)
+			}
+		}
+	}()
+	f()
+	require.Fail(t, `expected panic didn't happen`)
 }

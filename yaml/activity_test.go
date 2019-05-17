@@ -195,6 +195,36 @@ func TestParse_unresolvedType(t *testing.T) {
 	})
 }
 
+func TestParse_unparsableType(t *testing.T) {
+	requireError(t, `expected one of ',' or '}', got '' (file: testdata/typeparsefail.yaml, line: 6, column: 11)`, func() {
+		pcore.Do(func(ctx px.Context) {
+			ctx.SetLoader(px.NewFileBasedLoader(ctx.Loader(), "../puppetwf/testdata", ``, px.PuppetDataTypePath))
+			workflowFile := "testdata/typeparsefail.yaml"
+			content, err := ioutil.ReadFile(workflowFile)
+			if err != nil {
+				panic(err.Error())
+			}
+			yaml.CreateStep(ctx, workflowFile, content)
+		})
+	})
+}
+
+func TestParse_mismatchedType(t *testing.T) {
+	requireError(t,
+		"error while building call typemismatchfail (file: testdata/typemismatchfail.yaml, line: 11, column: 7)\nCaused by: invalid arguments for function Integer: expects one of:\n  (Convertible 1, Radix 2, Boolean 3)\n    rejected: parameter 1 variant '0' expects a Numeric value, got String\n    rejected: parameter 1 variant '1' expects a Boolean value, got String\n    rejected: parameter 1 variant '2' expects a match for Pattern[/\\\\A[+-]?\\\\s*(?:(?:0|[1-9]\\\\d*)|(?:0[xX][0-9A-Fa-f]+)|(?:0[0-7]+)|(?:0[bB][01]+))\\\\z/], got 'three // Not a number'\n    rejected: parameter 1 variant '3' expects a Timespan value, got String\n    rejected: parameter 1 variant '4' expects a Timestamp value, got String\n  (NamedArgs 1)\n    rejected: parameter 1 expects a NamedArgs value, got String (file: /home/thhal/go/pkg/mod/github.com/lyraproj/pcore@v0.0.0-20190516164225-2c1838ece043/pximpl/function.go, line: 316)",
+		func() {
+			pcore.Do(func(ctx px.Context) {
+				ctx.SetLoader(px.NewFileBasedLoader(ctx.Loader(), "../puppetwf/testdata", ``, px.PuppetDataTypePath))
+				workflowFile := "testdata/typemismatchfail.yaml"
+				content, err := ioutil.ReadFile(workflowFile)
+				if err != nil {
+					panic(err.Error())
+				}
+				yaml.CreateStep(ctx, workflowFile, content)
+			})
+		})
+}
+
 func TestParse_unresolvedAttr(t *testing.T) {
 	requireError(t, `A Kubernetes::Namespace has no attribute named no_such_attribute (file: testdata/attrfail.yaml, line: 3, column: 14)`, func() {
 		pcore.Do(func(ctx px.Context) {

@@ -354,13 +354,34 @@ func (a *step) makeParameter(c px.Context, field string, kl, vl *yaml.Value, ali
 			}
 		case px.OrderedMap:
 			var tp px.Type
-			if tn, ok := a.getStringProperty(vl, `type`); ok {
-				tp = c.ParseType(tn)
+			if tul, ok := getProperty(vl, `type`); ok {
+				if ts, ok := tul.Value.(px.StringValue); ok {
+					defer func() {
+						// Catch pcore type parse error and offset it with the types location in YAML.
+						if r := recover(); r != nil {
+							if re, ok := r.(issue.Reported); ok && re.Code() == types.ParseError {
+								panic(re.OffsetByLocation(a.location(tul)))
+							}
+							panic(r)
+						}
+					}()
+
+					str := ts.String()
+					t := types.ParseFile(a.origin, str)
+					if rt, ok := t.(px.ResolvableType); ok {
+						tp = rt.Resolve(c)
+					} else {
+						panic(fmt.Errorf(`expression "%s" does no resolve to a Type`, str))
+					}
+				} else {
+					panic(a.Error(tul, wf.FieldTypeMismatch, issue.H{`step`: a, `field`: `type`, `expected`: `String`, `actual`: tul.Value.PType()}))
+				}
 			}
 
 			var val px.Value
-			if lu, ok := v.Get4(`lookup`); ok {
+			if lul, ok := getProperty(vl, `lookup`); ok {
 				var args []px.Value
+				lu := lul.Value
 				if a, ok := lu.(*types.Array); ok {
 					args = a.AppendTo(make([]px.Value, 0, a.Len()))
 				} else {
@@ -368,9 +389,12 @@ func (a *step) makeParameter(c px.Context, field string, kl, vl *yaml.Value, ali
 				}
 				val = types.NewDeferred(`lookup`, args...)
 			} else {
-				val = v.Get5(`value`, nil)
-				if tp != nil {
-					val = types.CoerceTo(c, fmt.Sprintf(`%s:%s parameter value`, a.Label(), name), tp, val)
+				if vl, ok = getProperty(vl, `value`); ok {
+					val = vl.Unwrap()
+					if tp != nil {
+						defer a.amendError(vl)
+						val = types.CoerceTo(c, fmt.Sprintf(`%s:%s parameter value`, a.Label(), name), tp, val)
+					}
 				}
 			}
 

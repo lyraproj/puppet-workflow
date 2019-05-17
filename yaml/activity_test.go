@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"regexp"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -211,7 +212,7 @@ func TestParse_unparsableType(t *testing.T) {
 
 func TestParse_mismatchedType(t *testing.T) {
 	requireError(t,
-		"error while building call typemismatchfail (file: testdata/typemismatchfail.yaml, line: 11, column: 7)\nCaused by: invalid arguments for function Integer: expects one of:\n  (Convertible 1, Radix 2, Boolean 3)\n    rejected: parameter 1 variant '0' expects a Numeric value, got String\n    rejected: parameter 1 variant '1' expects a Boolean value, got String\n    rejected: parameter 1 variant '2' expects a match for Pattern[/\\\\A[+-]?\\\\s*(?:(?:0|[1-9]\\\\d*)|(?:0[xX][0-9A-Fa-f]+)|(?:0[0-7]+)|(?:0[bB][01]+))\\\\z/], got 'three // Not a number'\n    rejected: parameter 1 variant '3' expects a Timespan value, got String\n    rejected: parameter 1 variant '4' expects a Timestamp value, got String\n  (NamedArgs 1)\n    rejected: parameter 1 expects a NamedArgs value, got String (file: /home/thhal/go/pkg/mod/github.com/lyraproj/pcore@v0.0.0-20190516164225-2c1838ece043/pximpl/function.go, line: 316)",
+		regexp.MustCompile(`(?m:/typemismatchfail.yaml, line: 11, column: 7\)\s*Caused by: invalid arguments for function Integer)`),
 		func() {
 			pcore.Do(func(ctx px.Context) {
 				ctx.SetLoader(px.NewFileBasedLoader(ctx.Loader(), "../puppetwf/testdata", ``, px.PuppetDataTypePath))
@@ -239,13 +240,17 @@ func TestParse_unresolvedAttr(t *testing.T) {
 	})
 }
 
-func requireError(t *testing.T, msg string, f func()) {
+func requireError(t *testing.T, msg interface{}, f func()) {
 	t.Helper()
 	defer func() {
 		t.Helper()
 		if r := recover(); r != nil {
 			if err, ok := r.(error); ok {
-				require.Equal(t, msg, err.Error())
+				if s, ok := msg.(string); ok {
+					require.Equal(t, s, err.Error())
+				} else {
+					require.True(t, msg.(*regexp.Regexp).FindString(err.Error()) != ``)
+				}
 			} else {
 				panic(r)
 			}

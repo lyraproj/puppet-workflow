@@ -1,0 +1,13 @@
+parameters:
+  foo:
+    type: |-
+      Object[
+        attributes => {
+          name => String,
+          number => Integer
+        }
+      ]
+    value:
+      name: Bob
+      number: three // Not a number
+call: foo

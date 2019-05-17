@@ -27,7 +27,7 @@ type step struct {
 const kindWorkflow = 1
 const kindResource = 2
 const kindCollect = 3
-const kindReference = 4
+const kindCall = 4
 
 func CreateStep(c px.Context, file string, content []byte) wf.Step {
 	loc := issue.NewLocation(file, 0, 0)
@@ -67,9 +67,9 @@ func CreateStep(c px.Context, file string, content []byte) wf.Step {
 		return wf.NewIterator(c, func(ib wf.IteratorBuilder) {
 			a.buildIterator(ib)
 		})
-	case kindReference:
-		return wf.NewReference(c, func(rb wf.ReferenceBuilder) {
-			a.buildReference(rb)
+	case kindCall:
+		return wf.NewCall(c, func(rb wf.CallBuilder) {
+			a.buildCall(rb)
 		})
 	default:
 		return wf.NewResource(c, func(wb wf.ResourceBuilder) {
@@ -114,8 +114,8 @@ func (a *step) stepKind() int {
 		if m.IncludesKey2(`each`) || m.IncludesKey2(`eachPair`) || m.IncludesKey2(`times`) || m.IncludesKey2(`range`) {
 			return kindCollect
 		}
-		if m.IncludesKey2(`reference`) {
-			return kindReference
+		if m.IncludesKey2(`call`) {
+			return kindCall
 		}
 		// hash must include exactly one key which is a type name
 		if m.Keys().Select(func(key px.Value) bool { return types.TypeNamePattern.MatchString(key.String()) }).Len() == 1 {
@@ -170,7 +170,7 @@ func (a *step) buildResource(builder wf.ResourceBuilder) {
 	}
 }
 
-func (a *step) buildReference(builder wf.ReferenceBuilder) {
+func (a *step) buildCall(builder wf.CallBuilder) {
 	defer a.amendError(a.hash)
 
 	c := builder.Context()
@@ -181,12 +181,12 @@ func (a *step) buildReference(builder wf.ReferenceBuilder) {
 	builder.Parameters(a.extractParameters(c, `parameters`, true)...)
 	builder.Returns(a.extractParameters(c, `returns`, true)...)
 
-	// Step will reference a step with the same name by default.
-	reference := a.Name()
-	if ra, ok := a.getStringProperty(a.hash, `reference`); ok && ra != `` {
-		reference = ra
+	// Step will call a step with the same name by default.
+	call := a.Name()
+	if ra, ok := a.getStringProperty(a.hash, `call`); ok && ra != `` {
+		call = ra
 	}
-	builder.ReferenceTo(reference)
+	builder.CallTo(call)
 }
 
 func (a *step) buildWorkflow(builder wf.WorkflowBuilder) {
@@ -219,8 +219,8 @@ func (a *step) workflowStep(builder wf.ChildBuilder, name string, as *yaml.Value
 		builder.Iterator(ac.buildIterator)
 	case kindWorkflow:
 		builder.Workflow(ac.buildWorkflow)
-	case kindReference:
-		builder.Reference(ac.buildReference)
+	case kindCall:
+		builder.Call(ac.buildCall)
 	default:
 		builder.Resource(ac.buildResource)
 	}
@@ -232,8 +232,8 @@ func (a *step) Style() string {
 		return `workflow`
 	case kindCollect:
 		return `collect`
-	case kindReference:
-		return `reference`
+	case kindCall:
+		return `call`
 	default:
 		return `resource`
 	}
@@ -347,20 +347,41 @@ func (a *step) makeParameter(c px.Context, field string, kl, vl *yaml.Value, ali
 					if a.stepKind() == kindResource {
 						// Alias declaration
 						param = serviceapi.NewParameter(name, s, a.attributeType(c, s, vl), nil)
-					} else if a.stepKind() == kindReference {
+					} else if a.stepKind() == kindCall {
 						param = serviceapi.NewParameter(name, s, types.DefaultAnyType(), nil)
 					}
 				}
 			}
 		case px.OrderedMap:
 			var tp px.Type
-			if tn, ok := a.getStringProperty(vl, `type`); ok {
-				tp = c.ParseType(tn)
+			if tul, ok := getProperty(vl, `type`); ok {
+				if ts, ok := tul.Value.(px.StringValue); ok {
+					defer func() {
+						// Catch pcore type parse error and offset it with the types location in YAML.
+						if r := recover(); r != nil {
+							if re, ok := r.(issue.Reported); ok && re.Code() == types.ParseError {
+								panic(re.OffsetByLocation(a.location(tul)))
+							}
+							panic(r)
+						}
+					}()
+
+					str := ts.String()
+					t := types.ParseFile(a.origin, str)
+					if rt, ok := t.(px.ResolvableType); ok {
+						tp = rt.Resolve(c)
+					} else {
+						panic(fmt.Errorf(`expression "%s" does no resolve to a Type`, str))
+					}
+				} else {
+					panic(a.Error(tul, wf.FieldTypeMismatch, issue.H{`step`: a, `field`: `type`, `expected`: `String`, `actual`: tul.Value.PType()}))
+				}
 			}
 
 			var val px.Value
-			if lu, ok := v.Get4(`lookup`); ok {
+			if lul, ok := getProperty(vl, `lookup`); ok {
 				var args []px.Value
+				lu := lul.Value
 				if a, ok := lu.(*types.Array); ok {
 					args = a.AppendTo(make([]px.Value, 0, a.Len()))
 				} else {
@@ -368,9 +389,12 @@ func (a *step) makeParameter(c px.Context, field string, kl, vl *yaml.Value, ali
 				}
 				val = types.NewDeferred(`lookup`, args...)
 			} else {
-				val = v.Get5(`value`, nil)
-				if tp != nil {
-					val = types.CoerceTo(c, fmt.Sprintf(`%s:%s parameter value`, a.Label(), name), tp, val)
+				if vl, ok = getProperty(vl, `value`); ok {
+					val = vl.Unwrap()
+					if tp != nil {
+						defer a.amendError(vl)
+						val = types.CoerceTo(c, fmt.Sprintf(`%s:%s parameter value`, a.Label(), name), tp, val)
+					}
 				}
 			}
 

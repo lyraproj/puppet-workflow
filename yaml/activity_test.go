@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"regexp"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -195,6 +196,36 @@ func TestParse_unresolvedType(t *testing.T) {
 	})
 }
 
+func TestParse_unparsableType(t *testing.T) {
+	requireError(t, `expected one of ',' or '}', got '' (file: testdata/typeparsefail.yaml, line: 6, column: 11)`, func() {
+		pcore.Do(func(ctx px.Context) {
+			ctx.SetLoader(px.NewFileBasedLoader(ctx.Loader(), "../puppetwf/testdata", ``, px.PuppetDataTypePath))
+			workflowFile := "testdata/typeparsefail.yaml"
+			content, err := ioutil.ReadFile(workflowFile)
+			if err != nil {
+				panic(err.Error())
+			}
+			yaml.CreateStep(ctx, workflowFile, content)
+		})
+	})
+}
+
+func TestParse_mismatchedType(t *testing.T) {
+	requireError(t,
+		regexp.MustCompile(`(?m:/typemismatchfail.yaml, line: 11, column: 7\)\s*Caused by: invalid arguments for function Integer)`),
+		func() {
+			pcore.Do(func(ctx px.Context) {
+				ctx.SetLoader(px.NewFileBasedLoader(ctx.Loader(), "../puppetwf/testdata", ``, px.PuppetDataTypePath))
+				workflowFile := "testdata/typemismatchfail.yaml"
+				content, err := ioutil.ReadFile(workflowFile)
+				if err != nil {
+					panic(err.Error())
+				}
+				yaml.CreateStep(ctx, workflowFile, content)
+			})
+		})
+}
+
 func TestParse_unresolvedAttr(t *testing.T) {
 	requireError(t, `A Kubernetes::Namespace has no attribute named no_such_attribute (file: testdata/attrfail.yaml, line: 3, column: 14)`, func() {
 		pcore.Do(func(ctx px.Context) {
@@ -209,13 +240,17 @@ func TestParse_unresolvedAttr(t *testing.T) {
 	})
 }
 
-func requireError(t *testing.T, msg string, f func()) {
+func requireError(t *testing.T, msg interface{}, f func()) {
 	t.Helper()
 	defer func() {
 		t.Helper()
 		if r := recover(); r != nil {
 			if err, ok := r.(error); ok {
-				require.Equal(t, msg, err.Error())
+				if s, ok := msg.(string); ok {
+					require.Equal(t, s, err.Error())
+				} else {
+					require.True(t, msg.(*regexp.Regexp).FindString(err.Error()) != ``)
+				}
 			} else {
 				panic(r)
 			}

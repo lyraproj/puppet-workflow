@@ -1,0 +1,13 @@
+parameters:
+  foo:
+    type: |-
+      Object[
+        attributes => {
+          name => String // Should have comma here
+          number => Integer
+        }
+      ]
+    value:
+      name: Bob
+      number: 3
+call: foo

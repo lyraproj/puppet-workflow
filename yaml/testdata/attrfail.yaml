@@ -1,9 +1,0 @@
-steps:
-  namespace:
-    returns: no_such_attribute
-    Kubernetes::Namespace:
-      namespace_id: "ignore"
-      metadata:
-        name: "terraform-lyra"
-        resource_version: "hi"
-        self_link: "me"

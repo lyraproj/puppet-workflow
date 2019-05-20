@@ -3,7 +3,6 @@ package puppetwf
 import (
 	"bytes"
 	"io/ioutil"
-	"strings"
 	"unicode"
 
 	"github.com/hashicorp/go-hclog"
@@ -14,7 +13,6 @@ import (
 	"github.com/lyraproj/puppet-evaluator/evaluator"
 	"github.com/lyraproj/puppet-evaluator/pdsl"
 	"github.com/lyraproj/puppet-evaluator/puppet"
-	"github.com/lyraproj/puppet-workflow/yaml"
 	"github.com/lyraproj/servicesdk/grpc"
 	"github.com/lyraproj/servicesdk/service"
 	"github.com/lyraproj/servicesdk/serviceapi"
@@ -79,25 +77,19 @@ func (m *manifestLoader) LoadManifest(moduleDir string, fileName string) service
 	sb := service.NewServiceBuilder(ec, mf)
 	ec.Set(ServerBuilderKey, sb)
 
-	if strings.HasSuffix(fileName, `.yaml`) {
-		// Assume YAML content instead of Puppet DSL
-		sb.RegisterStateConverter(yaml.ResolveState)
-		sb.RegisterStep(yaml.CreateStep(ec, fileName, content))
-	} else {
-		ast := ec.ParseAndValidate(fileName, string(content), false)
-		ec.AddDefinitions(ast)
+	ast := ec.ParseAndValidate(fileName, string(content), false)
+	ec.AddDefinitions(ast)
 
-		sb.RegisterStateConverter(ResolveState)
-		for _, def := range ec.ResolveDefinitions() {
-			switch def := def.(type) {
-			case PuppetStep:
-				sb.RegisterStep(def.Step())
-			case px.Type:
-				sb.RegisterType(def)
-			}
+	sb.RegisterStateConverter(ResolveState)
+	for _, def := range ec.ResolveDefinitions() {
+		switch def := def.(type) {
+		case PuppetStep:
+			sb.RegisterStep(def.Step())
+		case px.Type:
+			sb.RegisterType(def)
 		}
-		pdsl.TopEvaluate(ec, ast)
 	}
+	pdsl.TopEvaluate(ec, ast)
 	s, _ := m.ctx.Get(`Puppet::ServiceLoader`)
 	return s.(*service.Server).AddApi(mf, &manifestService{ec, sb.Server()})
 }

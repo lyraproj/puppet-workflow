@@ -5,10 +5,11 @@ import (
 	"io/ioutil"
 	"unicode"
 
+	"github.com/lyraproj/pcore/pcore"
+
 	"github.com/hashicorp/go-hclog"
 	"github.com/lyraproj/issue/issue"
 	"github.com/lyraproj/pcore/px"
-	"github.com/lyraproj/pcore/pximpl"
 	"github.com/lyraproj/pcore/types"
 	"github.com/lyraproj/puppet-evaluator/evaluator"
 	"github.com/lyraproj/puppet-evaluator/pdsl"
@@ -43,10 +44,9 @@ func (m *manifestService) State(name string, parameters px.OrderedMap) px.Puppet
 }
 
 func WithService(serviceName string, sf func(c pdsl.EvaluationContext, s serviceapi.Service)) {
-	rt := pximpl.InitializeRuntime()
-	rt.SetLogger(grpc.NewHclogLogger(hclog.Default()))
-	rt.Set(`tasks`, types.BooleanTrue)
-	rt.Set(`workflow`, types.BooleanTrue)
+	pcore.SetLogger(grpc.NewHclogLogger(hclog.Default()))
+	pcore.Set(`tasks`, types.BooleanTrue)
+	pcore.Set(`workflow`, types.BooleanTrue)
 
 	puppet.Do(func(c pdsl.EvaluationContext) {
 		c.DoWithLoader(service.FederatedLoader(c.Loader()), func() {

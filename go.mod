@@ -11,7 +11,3 @@ require (
 	github.com/stretchr/testify v1.3.0
 	gopkg.in/check.v1 v1.0.0-20161208181325-20d25e280405 // indirect
 )
-
-replace github.com/lyraproj/pcore => github.com/thallgren/pcore v0.0.0-20190619151240-bebc8c351bb4
-
-replace github.com/lyraproj/servicesdk => github.com/thallgren/servicesdk v0.0.0-20190619152445-7481da553aae
